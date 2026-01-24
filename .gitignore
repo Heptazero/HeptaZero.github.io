@@ -1,7 +1,16 @@
+# OS System Files (操作系统生成的文件)
 .DS_Store
 Thumbs.db
+
+# Hexo Cache & Logs (Hexo 缓存与日志)
 db.json
 *.log
+
+# Dependencies (依赖包 - 体积巨大，可自动安装)
 node_modules/
+
+# Generated Static Files (生成的网页 - 不要提交到源码分支)
 public/
+
+# Hexo Deployment Git Repo (部署插件生成的临时仓库)
 .deploy_git/

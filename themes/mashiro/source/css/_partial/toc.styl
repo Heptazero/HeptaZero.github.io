@@ -1,0 +1,65 @@
+#floating-toc
+  position: fixed
+  right: 20px
+  top: 50%
+  transform: translateY(-50%)
+  width: 200px
+  max-height: 80vh
+  overflow-y: auto
+  padding: 10px
+  z-index: 10
+  opacity: 1
+  transition: opacity 0.3s ease
+  .mobile-nav-on &
+    opacity: 0
+    pointer-events: none
+  @media mq-mobile
+    display: none
+
+  .toc
+    margin: 0
+    padding: 0
+    list-style: none
+  
+  .toc-item
+    margin-bottom: 5px
+    list-style: none
+  
+  .toc-link
+    color: #999
+    text-decoration: none
+    display: block
+    padding: 2px 0
+    transition: all 0.3s ease
+    font-size: 0.9em
+    border-left: 2px solid transparent
+    padding-left: 10px
+    position: relative
+    
+    &.active
+      color: #000
+      font-weight: bold
+      // Default active style
+  
+  // Top-level specific styles
+  .toc > .toc-item > .toc-link.active
+    font-size: 1.1em
+    border-left: 4px solid #000
+    padding-left: 15px
+
+  .toc-child
+    padding-left: 15px
+    display: block
+    
+    // Child link styles - remove border completely
+    .toc-link
+      border-left: none
+      padding-left: 10px
+    
+    .toc-link.active
+      color: #000
+      font-weight: bold
+      font-size: 0.9em
+    // display: none
+    // &.active-child, .toc-link.active + &
+    //   display: block

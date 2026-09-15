@@ -5,7 +5,7 @@
 # ==============================================================================
 # Site (站点信息)
 # ==============================================================================
-title: 绝叫路人β           # 网站标题，显示在浏览器标签页和网页头部
+title: 绝叫路人H           # 网站标题，显示在浏览器标签页和网页头部
 subtitle: ''               # 副标题，可选，有的主题会显示
 description: ''            # 网站描述，主要用于SEO（搜索引擎优化），建议写一段简短的自我介绍或博客定位
 keywords:                  # 关键词，用于SEO，多个关键词用英文逗号分隔
@@ -62,13 +62,18 @@ post_asset_folder: true   # 【重要】是否启动资源文件夹。
                            # 方便你存放该文章专属的图片，并在文章中用相对路径 `![](图片名.png)` 引用。
 relative_link: false       # 是否使用相对路径链接，建议 false
 future: true               # 是否发布未来日期的文章
-syntax_highlighter: highlight.js # 代码高亮引擎
+# syntax_highlighter: highlight.js # 代码高亮引擎
 highlight:
-  line_number: true        # 显示行号
+  enable: false        # 显示行号
+  line_number: true
   auto_detect: false       # 自动检测语言
   tab_replace: ''
   wrap: true
   hljs: false
+
+# Also add this line for Hexo 7.0.0+:
+syntax_highlighter: # empty
+
 prismjs:                   # 另一种高亮引擎 PrismJS 的设置
   preprocess: true
   line_number: true
@@ -124,7 +129,18 @@ pagination_dir: page       # 分页目录名
 # - 'next' (极简，非常经典)
 # - 'fluid' (美观且配置简单)
 # 修改这里前，记得先去 themes/ 目录下下载对应的主题文件夹。
-theme: node-tree
+# theme: node-tree
+# theme: Academia
+# theme: lagom
+# theme: hexo-theme-xoxo-plus-master
+theme: mashiro
+# ==========================
+# Search（站内搜索）配置
+# ==========================
+search:
+  path: search.xml          # 生成的搜索索引文件名
+  field: all                # 索引所有字段（title、content、tags、categories）
+  content: true             # 是否把正文内容也加入索引（会让搜索更精准，但文件会稍大）
 
 # ==============================================================================
 # Deployment (部署)
@@ -138,3 +154,10 @@ deploy:
   # 注意：老版本 Hexo 可能用 'repo' 这个字段，新版本通常用 'repository'，如果报错可以改名试试。
   repository: https://github.com/Heptazero/HeptaZero.github.io.git
   branch: main                 # 部署的分支。GitHub 现在默认是 main，早期是 master。一定要和你的仓库一致。
+
+# ==============================================================================
+# Reading Time (阅读时间插件)
+# ==============================================================================
+reading_time:
+  wpm: 150
+  dateFormat: 'LLL'

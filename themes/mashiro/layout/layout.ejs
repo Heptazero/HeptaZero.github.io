@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<%- partial('_partial/head') %>
+
+  <body>
+    <div id="container">
+      <div id="wrap">
+        <%- partial('_partial/header', null, {cache: false}) %>
+          <div id="content" class="outer <%= is_home() ? 'is-home' : 'not-home' %>">
+            <% var has_toc=is_post() && theme.toc.enable && ((theme.toc.default==true && page.toc==undefined) ||
+              page.toc==true); %>
+              <% var show_recent_sidebar=is_home(); %>
+                <section id="main" class="has-toc"><%- body %>
+                </section>
+          </div>
+          <% if (has_toc) { %>
+            <aside id="floating-toc">
+              <%- toc(page.content, { max_depth: 6, min_depth: 1, list_number: false }) %>
+            </aside>
+            <% } %>
+              <%- partial('_partial/footer', null, {cache: !config.relative_link}) %>
+      </div>
+      <%- partial('_partial/mobile-nav', null, {cache: !config.relative_link}) %>
+        <%- partial('_partial/after-footer') %>
+    </div>
+  </body>
+
+</html>

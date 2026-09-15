@@ -1,0 +1,15 @@
+<nav id="mobile-nav">
+
+  <div class="mobile-nav-categories">
+    <h3 class="widget-title">
+      <%= __('categories') %>
+    </h3>
+    <%- list_categories({show_count: false, style: 'list' }) %>
+  </div>
+  <div class="mobile-nav-tagcloud">
+    <h3 class="widget-title">
+      <%= __('tags') %>
+    </h3>
+    <%- tagcloud({min_font: 15, max_font: 30, amount: 50, color: true, start_color: '#999' , end_color: '#111' }) %>
+  </div>
+</nav>

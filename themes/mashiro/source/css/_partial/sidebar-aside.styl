@@ -1,0 +1,31 @@
+#sidebar
+  @media mq-normal
+    width: 13%
+    // column(sidebar-column)
+    // float: right
+    position: fixed
+    top: 50%
+    right: 20px
+    transform: translateY(-50%)
+    margin: 0 !important
+
+.widget-wrap
+  margin: 0 0 24px
+
+.widget-title
+  @extend $block-caption
+
+.widget
+  border: 1px solid #ddd
+  padding: 10px 15px
+  a
+    color: color-link
+    text-decoration: none
+    &:hover
+      text-decoration: none
+      font-weight: bold
+      color: #000
+  ul, ol, dl
+    ul, ol, dl
+      margin-left: 15px
+      list-style: disc

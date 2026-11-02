@@ -3,22 +3,21 @@
   // 页面正文组件初始化（图片灯箱、大纲自动生成、滚动监听、代码复制、KaTeX）
   // -------------------------------------------------------------
   function initPage() {
-    // 1. Caption & Fancybox（仅对非自定义画廊的普通图片包裹）
+    // 1. Caption 自动提取与表格横向滚动封装
     $('.article-entry, .article-inner').each(function(i){
       $(this).find('img').each(function(){
-        if ($(this).parent().hasClass('fancybox') || $(this).parent().is('a') || $(this).closest('.gallery-item').length) return;
+        if ($(this).next('.caption').length || $(this).closest('.gallery-item').length) return;
         var alt = this.alt;
         if (alt) $(this).after('<span class="caption">' + alt + '</span>');
-        $(this).wrap('<a class="fancybox" href="' + this.src + '" data-fancybox="gallery" data-caption="' + alt + '"></a>');
-      });
-      $(this).find('.fancybox').each(function(){
-        $(this).attr('rel', 'article' + i);
       });
     });
 
-    if ($.fancybox){
-      $('.fancybox').fancybox();
-    }
+    // 表格移动端横向滑动包装（自适应包裹层）
+    $('.article-entry table').each(function() {
+      if (!$(this).parent().hasClass('table-wrap')) {
+        $(this).wrap('<div class="table-wrap"></div>');
+      }
+    });
 
     // 2. 代码块复制按钮
     var codes = document.getElementsByClassName('code');
@@ -226,42 +225,97 @@
     }, mobileNavAnimDuration);
   };
 
-  var nav = document.getElementById('main-nav-toggle');
-  if (nav) {
-    nav.onclick = function(){
-      if (isMobileNavAnim) return;
-      startMobileNavAnim();
-      $container.toggleClass('mobile-nav-on');
-      stopMobileNavAnim();
-    };
-  }
-
-  // 遮罩层点击关闭抽屉
+  // 移动端侧边抽屉与遮罩全局事件委托（原生事件监听，PJAX 切页后永不失效，且不依赖特定 jQuery 版本）
   var dimEl = document.getElementById('mobile-nav-dim');
   if (!dimEl) {
     dimEl = document.createElement('div');
     dimEl.id = 'mobile-nav-dim';
     document.body.appendChild(dimEl);
   }
-  dimEl.onclick = function() {
-    if (isMobileNavAnim) return;
-    startMobileNavAnim();
-    $container.removeClass('mobile-nav-on');
-    stopMobileNavAnim();
-  };
 
-  var wrap = document.getElementById('wrap');
-  if (wrap) {
-    wrap.onclick = function(e){
-      if (isMobileNavAnim || !$container.hasClass('mobile-nav-on')) return;
-      if ($(e.target).closest('#mobile-nav, #main-nav-toggle').length) return;
+  document.addEventListener('click', function(e) {
+    var target = e.target;
+    var toggleBtn = target.closest ? target.closest('#main-nav-toggle') : null;
+    if (toggleBtn) {
+      e.preventDefault();
+      if (isMobileNavAnim) return;
+      startMobileNavAnim();
+      $container.toggleClass('mobile-nav-on');
+      stopMobileNavAnim();
+      return;
+    }
+
+    var dimTarget = target.closest ? target.closest('#mobile-nav-dim') : null;
+    if (dimTarget) {
+      if (isMobileNavAnim) return;
+      startMobileNavAnim();
       $container.removeClass('mobile-nav-on');
-    };
-  }
+      stopMobileNavAnim();
+      return;
+    }
 
-  // 手机端点击大纲项后自动收起抽屉
-  $('.mobile-nav-toc').delegate('.toc-link', 'click', function() {
-    $('#container').removeClass('mobile-nav-on');
+    var tocLink = target.closest ? target.closest('.mobile-nav-toc .toc-link') : null;
+    if (tocLink) {
+      $container.removeClass('mobile-nav-on');
+      return;
+    }
+
+    if ($container.hasClass('mobile-nav-on')) {
+      var inMobileNav = target.closest ? target.closest('#mobile-nav') : null;
+      if (!inMobileNav) {
+        $container.removeClass('mobile-nav-on');
+      }
+    }
+  });
+
+  // 纯原生高性能无依赖全屏灯箱（彻底杜绝移动端将图片链接误当成文件下载的弹窗行为）
+  document.addEventListener('click', function(e) {
+    var target = e.target;
+    var img = target.closest ? target.closest('.article-entry img, .gallery-item img') : null;
+    if (!img) return;
+
+    // 若图片在有真实跳转意图的超链接内且非灯箱链接，则放行
+    if (img.parentElement && img.parentElement.tagName === 'A' && !img.parentElement.classList.contains('fancybox') && !img.parentElement.classList.contains('image-lightbox-link')) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+
+    var src = img.getAttribute('src');
+    var caption = img.getAttribute('alt') || '';
+    if (!src) return;
+
+    var lightbox = document.getElementById('image-lightbox');
+    if (!lightbox) {
+      lightbox = document.createElement('div');
+      lightbox.id = 'image-lightbox';
+      lightbox.innerHTML = '<div class="lightbox-dialog"><img class="lightbox-img-full" src="" alt="" /><div class="lightbox-caption"></div><button class="lightbox-close" title="关闭">&times;</button></div>';
+      document.body.appendChild(lightbox);
+
+      lightbox.addEventListener('click', function(evt) {
+        if (!evt.target.classList.contains('lightbox-img-full')) {
+          lightbox.classList.remove('active');
+        }
+      });
+      document.addEventListener('keydown', function(evt) {
+        if (evt.key === 'Escape' || evt.keyCode === 27) {
+          lightbox.classList.remove('active');
+        }
+      });
+    }
+
+    var fullImg = lightbox.querySelector('.lightbox-img-full');
+    if (fullImg) fullImg.src = src;
+    var capEl = lightbox.querySelector('.lightbox-caption');
+    if (capEl) {
+      if (caption) {
+        capEl.textContent = caption;
+        capEl.style.display = 'block';
+      } else {
+        capEl.style.display = 'none';
+      }
+    }
+    lightbox.classList.add('active');
   });
 
   // TOC scroll spy（结合人体自然阅读视线基准线与触底锁定）
@@ -403,6 +457,7 @@
           if (newMobileNav && oldMobileNav) {
             oldMobileNav.innerHTML = newMobileNav.innerHTML;
           }
+          $container.removeClass('mobile-nav-on');
 
           // 4. 原地同步大纲容器（仅当新页面为文章页且含有标题时才显示；About 与 Home 均不大纲化）
           var isAboutPage = url.indexOf('about.html') !== -1 || !!newDoc.querySelector('.article-type-about');

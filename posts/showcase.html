@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="/css/fonts/noto/noto-serif-sc.css">
   <link rel="stylesheet" href="/css/fonts/ChineseMono-normal-normal.min.css">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="/css/style.css?v=2.4">
+  <link rel="stylesheet" href="/css/style.css?v=2.5">
   <!-- KaTeX 零构建数学公式渲染支持与公式复制扩展 (本地纯静态) -->
   <link rel="stylesheet" href="/css/katex/katex.min.css">
   <script src="/js/katex/katex.min.js"></script>
@@ -82,7 +82,24 @@
 
                 <h3 id="3-2-动态加载与-gif-动图测试">3.2 动态加载与 GIF 动图测试</h3>
                 <p>动态图能够极好地展示物理仿真、演化算法以及界面动效。无论是 GIF 还是高效的 WebP/APNG 动画，均享有与静态图片一致的居中、约束与灯箱特性：</p>
-                <p><img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='200' viewBox='0 0 600 200'><rect width='600' height='200' fill='%23111827'/><circle cx='150' cy='100' r='18' fill='%2360a5fa'><animate attributeName='cy' values='100;40;100' dur='1.2s' repeatCount='indefinite'/></circle><circle cx='300' cy='100' r='18' fill='%2334d399'><animate attributeName='cy' values='100;40;100' dur='1.2s' begin='0.2s' repeatCount='indefinite'/></circle><circle cx='450' cy='100' r='18' fill='%23f472b6'><animate attributeName='cy' values='100;40;100' dur='1.2s' begin='0.4s' repeatCount='indefinite'/></circle><text x='300' y='170' fill='%239ca3af' font-family='monospace' font-size='14' text-anchor='middle'>Continuous Wave Simulation (SVG/GIF)</text></svg>" alt="图 2：周期波动画仿真效果"></p>
+                <div class="showcase-animation-box">
+                  <svg class="wave-svg" viewBox="0 0 600 200" width="100%" height="200" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="waveBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#0f172a"/>
+                        <stop offset="100%" stop-color="#1e293b"/>
+                      </linearGradient>
+                    </defs>
+                    <rect width="600" height="200" rx="8" fill="url(#waveBg)"/>
+                    <g class="wave-dot wave-dot-1"><circle cx="120" cy="95" r="16" fill="#38bdf8"/></g>
+                    <g class="wave-dot wave-dot-2"><circle cx="210" cy="95" r="16" fill="#818cf8"/></g>
+                    <g class="wave-dot wave-dot-3"><circle cx="300" cy="95" r="16" fill="#34d399"/></g>
+                    <g class="wave-dot wave-dot-4"><circle cx="390" cy="95" r="16" fill="#f472b6"/></g>
+                    <g class="wave-dot wave-dot-5"><circle cx="480" cy="95" r="16" fill="#fbbf24"/></g>
+                    <text x="300" y="165" fill="#94a3af" font-family="'Noto Serif SC', serif" font-size="13" text-anchor="middle">Continuous Wave Simulation (60fps CSS / GPU 硬件加速)</text>
+                  </svg>
+                  <span class="caption">图 2：周期波动画仿真效果（移动端支持 60fps 硬件加速）</span>
+                </div>
 
                 <h3 id="3-3-多图并排画廊">3.3 多图并排画廊（Gallery Grid）</h3>
                 <p>对于多张对比图或实验结果，无需单张纵向堆叠，可采用多图自适应并排画廊，每张图支持裁剪对齐与独立灯箱放大：</p>
@@ -234,7 +251,7 @@
     </nav>
     <script src="/js/clipboard.min.js"></script>
     <script src="/js/jquery-1.4.3.min.js"></script>
-    <script src="/js/script.js?v=2.4"></script>
+    <script src="/js/script.js?v=2.5"></script>
   </div>
 </body>
 </html>

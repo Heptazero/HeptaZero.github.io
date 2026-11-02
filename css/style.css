@@ -508,7 +508,7 @@ html {
 }
 body {
   background: #fff;
-  font: 16px "Noto Serif SC", "LM-Roman-10", "biaodian", serif;
+  font: 16px "Noto Serif SC", "Songti SC", "Source Han Serif SC", "STSong", "SimSun", "LM-Roman-10", "biaodian", serif;
   -webkit-text-size-adjust: 100%;
 }
 #content {
@@ -607,7 +607,7 @@ body {
 #main-404 {
   font-size: 40px;
   font-weight: bold;
-  font-family: "Noto Serif SC", "LM-Roman-10", "biaodian", serif;
+  font-family: "Noto Serif SC", "Songti SC", "Source Han Serif SC", "STSong", "SimSun", "LM-Roman-10", "biaodian", serif;
   text-align: center;
   margin: 100px 0;
 }
@@ -715,7 +715,9 @@ a {
 @media screen and (max-width: 600px) {
   #main-nav {
     padding: 0 14px !important;
-    justify-content: flex-start;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
   }
 }
 .main-nav-links {
@@ -742,8 +744,23 @@ a {
     -moz-transform: none;
     -ms-transform: none;
     transform: none;
-    margin-left: 8px;
+    margin-left: 0;
     gap: 2px;
+    order: 1;
+  }
+  #main-nav-toggle {
+    order: 2 !important;
+    margin-left: auto !important;
+    width: 44px !important;
+    height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+  }
+  #main-nav-toggle:before {
+    margin-top: -6px !important;
+    top: 0 !important;
   }
 }
 .nav-icon,
@@ -892,7 +909,7 @@ a {
   background: none;
   color: #222;
   width: 100%;
-  font: 13px "Noto Serif SC", "LM-Roman-10", "biaodian", serif;
+  font: 13px "Noto Serif SC", "Songti SC", "Source Han Serif SC", "STSong", "SimSun", "LM-Roman-10", "biaodian", serif;
   outline: none;
 }
 .search-form-input::-webkit-search-results-decoration,
@@ -1004,6 +1021,9 @@ a {
 }
 .article-entry {
   text-align: justify;
+  text-justify: inter-ideograph;
+  word-break: break-word;
+  overflow-wrap: break-word;
   color: #222;
 }
 .index-mode .article-entry {
@@ -1130,6 +1150,12 @@ a {
     width: 100%;
     height: 140px;
   }
+  .article-entry {
+    text-align: left !important;
+    text-justify: auto !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
 }
 .article-entry.index-entry p:empty {
   display: none !important;
@@ -1252,12 +1278,35 @@ a {
 .article-entry iframe {
   border: none;
 }
+.table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 1.2em 0;
+  scrollbar-width: thin;
+}
+.table-wrap::-webkit-scrollbar {
+  height: 6px;
+}
+.table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+.table-wrap::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
 .article-entry table {
   border-top: 1.5px solid #000;
   border-bottom: 1.5px solid #000;
   width: 100%;
   border-collapse: collapse;
   border-spacing: 0;
+}
+@media screen and (max-width: 600px) {
+  .table-wrap table {
+    min-width: 480px;
+  }
 }
 .article-entry th {
   font-weight: bold;
@@ -1273,7 +1322,7 @@ a {
   text-align: center;
 }
 .article-entry blockquote {
-  font-family: "Noto Serif SC", "LM-Roman-10", "biaodian", serif;
+  font-family: "Noto Serif SC", "Songti SC", "Source Han Serif SC", "STSong", "SimSun", "LM-Roman-10", "biaodian", serif;
   margin: 1.6em 0;
   padding: 0px 2em;
   padding: 0.25em 2em 0.25em calc(2em - 5px);
@@ -1584,7 +1633,7 @@ a {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  font: 14px "Noto Serif SC", "LM-Roman-10", "biaodian", serif;
+  font: 14px "Noto Serif SC", "Songti SC", "Source Han Serif SC", "STSong", "SimSun", "LM-Roman-10", "biaodian", serif;
   padding: 0 15px;
   color: #222;
   outline: none;
@@ -1983,7 +2032,7 @@ a {
 .article-entry .gist .gist-file .gist-meta {
   background: #fff;
   color: #8e908c;
-  font: 0.85em "Noto Serif SC", "LM-Roman-10", "biaodian", serif;
+  font: 0.85em "Noto Serif SC", "Songti SC", "Source Han Serif SC", "STSong", "SimSun", "LM-Roman-10", "biaodian", serif;
   text-shadow: 0 0;
   padding: 0;
   margin-top: 1em;
@@ -2792,4 +2841,116 @@ html {
 }
 .dynamic-content p {
   margin: 0 0 8px;
+}
+
+/* =========================================
+   原生纯净图片灯箱（Zero-Dependency Lightbox）
+   ========================================= */
+.article-entry img,
+.gallery-item img {
+  cursor: zoom-in;
+}
+#image-lightbox {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+#image-lightbox.active {
+  opacity: 1;
+  visibility: visible;
+}
+#image-lightbox .lightbox-dialog {
+  position: relative;
+  max-width: 92vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+#image-lightbox .lightbox-img-full {
+  max-width: 92vw;
+  max-height: 82vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+  cursor: zoom-out;
+  transform: scale(0.96);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#image-lightbox.active .lightbox-img-full {
+  transform: scale(1);
+}
+#image-lightbox .lightbox-caption {
+  margin-top: 12px;
+  color: #e2e8f0;
+  font-size: 14px;
+  text-align: center;
+  background: rgba(15, 23, 42, 0.7);
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  max-width: 80vw;
+}
+#image-lightbox .lightbox-close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  padding: 4px 8px;
+}
+#image-lightbox .lightbox-close:hover {
+  opacity: 1;
+}
+
+/* 动图与波形仿真卡片动效（60fps GPU加速） */
+@keyframes waveBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-28px);
+  }
+}
+.wave-dot {
+  animation: waveBounce 1.4s ease-in-out infinite;
+  transform-origin: center;
+}
+.wave-dot-1 { animation-delay: 0s; }
+.wave-dot-2 { animation-delay: 0.15s; }
+.wave-dot-3 { animation-delay: 0.3s; }
+.wave-dot-4 { animation-delay: 0.45s; }
+.wave-dot-5 { animation-delay: 0.6s; }
+.showcase-animation-box {
+  margin: 1.5em 0;
+  text-align: center;
+}
+.showcase-animation-box svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>排版与多媒体特性全景测试 | Heptazero</title>
+  <link rel="stylesheet" href="../css/fonts/noto/noto-serif-sc.css">
+  <link rel="stylesheet" href="../css/fonts/ChineseMono-normal-normal.min.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="../css/style.css?v=2.3">
+  <!-- KaTeX 零构建数学公式渲染支持与公式复制扩展 (本地纯静态) -->
+  <link rel="stylesheet" href="../css/katex/katex.min.css">
+  <script src="../js/katex/katex.min.js"></script>
+  <script src="../js/katex/auto-render.min.js"></script>
+  <script src="../js/katex/copy-tex.min.js"></script>
+</head>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <div id="nav-outer">
+        <nav id="main-nav" class="outer">
+          <a id="main-nav-toggle" class="nav-icon" title="Menu"></a>
+          <div class="main-nav-links">
+            <a class="main-nav-link" href="../index.html">Home</a>
+            <a class="main-nav-link" href="../archives.html">Archives</a>
+            <a class="main-nav-link" href="../log.html">Log</a>
+            <a class="main-nav-link" href="../about.html">About</a>
+          </div>
+          <div id="sub-nav">
+            <a id="nav-github-link" class="nav-icon" href="https://github.com/HeptaZero" target="_blank" rel="noopener" title="GitHub"></a>
+            <a id="nav-mail-link" class="nav-icon" href="mailto:1004752777@qq.com" title="Email"></a>
+          </div>
+        </nav>
+      </div>
+      <div id="header-title">
+        <h1 id="logo-wrap">
+          <a href="../index.html" id="logo">排版与多媒体特性全景测试</a>
+        </h1>
+      </div>
+      <div id="content" class="outer not-home">
+        <section id="main" class="has-toc">
+          <article id="post-showcase" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+            <div class="article-meta">
+              <a href="showcase.html" class="article-date">
+                <time class="dt-published" datetime="2026-11-01" itemprop="datePublished">2026-11-01</time>
+              </a>
+              <div class="article-category">
+                <a class="article-category-link" href="../tags/杂谈.html">杂谈</a>
+              </div>
+            </div>
+            <div class="article-inner">
+              <div class="e-content article-entry" itemprop="articleBody">
+
+                <h2 id="一-导言与全景测试说明">一、导言与全景测试说明</h2>
+                <p>这是一篇用于全面检验博客排版极限与多媒体渲染的测试示例。你可以借助本篇观察长篇滚动时<strong>左侧 Cloud 风格树形大纲的高亮流转</strong>、<strong>超长大纲自身的滚动条与贴边表现</strong>、<strong>零构建环境下的 LaTeX 数学公式解析</strong>、<strong>深浅代码高亮</strong>以及<strong>静态图与动态 GIF 的图文混排</strong>效果。测试完毕后可随时清理。</p>
+
+                <h2 id="二-数学公式与科学符号渲染">二、数学公式与科学符号渲染</h2>
+                <p>在零构建静态体系下，我们利用 KaTeX 实现了与 Obsidian、Typora 完全兼容的原生 LaTeX 语法解析。无论是内嵌行内微积分，还是大型矩阵与拓扑收缩映射，均能实现毫秒级即时矢量绘制。</p>
+
+                <h3 id="2-1-行内公式测试">2.1 行内公式测试</h3>
+                <p>数学公式应当如水流般融入宋体正文的字里行间。例如著名的欧拉恒等式 $e^{i\pi} + 1 = 0$ 阐释了数论、代数与几何的闭合统一；而在微分几何中，流形上的外微分算子满足算子平方为零的超对称性质，即 $d^2 = d \circ d = 0$。在深度学习的损失空间中，若参数向量记为 $\theta \in \mathbb{R}^d$，则梯度下降步长满足 $\|\nabla_\theta \mathcal{L}(\theta)\|_2 \le \epsilon$。</p>
+
+                <h3 id="2-2-独立块级公式与高斯积分">2.2 独立块级公式与高斯积分</h3>
+                <p>在概率论与量子场论中，一维高斯积分具有如下优美形式：</p>
+                $$\int_{-\infty}^{+\infty} e^{-a x^2} \, dx = \sqrt{\frac{\pi}{a}} \quad (a > 0)$$
+
+                <h3 id="2-3-现代深度学习注意力机制">2.3 现代深度学习注意力机制</h3>
+                <p>在大语言模型与 Transformer 架构中，Scaled Dot-Product Attention（缩放点积注意力）定义如下：</p>
+                $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{Q K^T}{\sqrt{d_k}}\right) V$$
+                <p>其中 $Q, K, V$ 分别代表 Query、Key 和 Value 投影矩阵，$\sqrt{d_k}$ 充当防止梯度饱和的温度缩放因子。</p>
+
+                <h3 id="2-4-拓扑学同伦连续变形">2.4 拓扑学同伦连续变形</h3>
+                <p>若两映射 $f, g: X \to Y$ 是同伦的，则存在连续映射族 $H: X \times [0, 1] \to Y$ 满足：</p>
+                $$H(x, 0) = f(x), \quad H(x, 1) = g(x), \quad \forall x \in X$$
+
+                <h2 id="三-图片与动态图排版">三、图片与动态图排版</h2>
+                <p>博客支持自适应居中排版、外边框微圆角以及图注说明（Caption）。当读者需要沉浸查阅细节时，灯箱组件（Fancybox）还允许点击全屏放大放大预览。</p>
+
+                <h3 id="3-1-静态矢量示意图">3.1 静态矢量示意图</h3>
+                <p><img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='320' viewBox='0 0 800 320'><rect width='800' height='320' fill='%23f8fafc'/><rect x='40' y='40' width='720' height='240' rx='12' fill='%23ffffff' stroke='%23e2e8f0' stroke-width='2'/><circle cx='180' cy='160' r='60' fill='%23000000' opacity='0.08'/><circle cx='180' cy='160' r='45' fill='%23000000'/><text x='180' y='166' fill='%23ffffff' font-family='serif' font-size='20' text-anchor='middle'>X</text><circle cx='620' cy='160' r='60' fill='%23000000' opacity='0.08'/><circle cx='620' cy='160' r='45' fill='%23000000'/><text x='620' y='166' fill='%23ffffff' font-family='serif' font-size='20' text-anchor='middle'>Y</text><path d='M250,160 C380,80 420,80 550,160' stroke='%23000000' stroke-width='3' fill='none' marker-end='url(%23arr)'/><text x='400' y='95' fill='%23000000' font-family='serif' font-size='18' text-anchor='middle'>H(x, t): Continuous Deformation</text></svg>" alt="图 1：拓扑空间连续形变态射流示意图"></p>
+
+                <h3 id="3-2-动态加载与-gif-动图测试">3.2 动态加载与 GIF 动图测试</h3>
+                <p>动态图能够极好地展示物理仿真、演化算法以及界面动效。无论是 GIF 还是高效的 WebP/APNG 动画，均享有与静态图片一致的居中、约束与灯箱特性：</p>
+                <p><img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='200' viewBox='0 0 600 200'><rect width='600' height='200' fill='%23111827'/><circle cx='150' cy='100' r='18' fill='%2360a5fa'><animate attributeName='cy' values='100;40;100' dur='1.2s' repeatCount='indefinite'/></circle><circle cx='300' cy='100' r='18' fill='%2334d399'><animate attributeName='cy' values='100;40;100' dur='1.2s' begin='0.2s' repeatCount='indefinite'/></circle><circle cx='450' cy='100' r='18' fill='%23f472b6'><animate attributeName='cy' values='100;40;100' dur='1.2s' begin='0.4s' repeatCount='indefinite'/></circle><text x='300' y='170' fill='%239ca3af' font-family='monospace' font-size='14' text-anchor='middle'>Continuous Wave Simulation (SVG/GIF)</text></svg>" alt="图 2：周期波动画仿真效果"></p>
+
+                <h3 id="3-3-多图并排画廊">3.3 多图并排画廊（Gallery Grid）</h3>
+                <p>对于多张对比图或实验结果，无需单张纵向堆叠，可采用多图自适应并排画廊，每张图支持裁剪对齐与独立灯箱放大：</p>
+                <div class="gallery-grid">
+                  <div class="gallery-item">
+                    <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='260' viewBox='0 0 400 260'><rect width='400' height='260' fill='%23f1f5f9'/><circle cx='200' cy='130' r='50' fill='%233b82f6'/><text x='200' y='210' font-family='serif' font-size='16' text-anchor='middle' fill='%23475569'>样本 A：高维流形投影</text></svg>" alt="画廊样本 A">
+                  </div>
+                  <div class="gallery-item">
+                    <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='260' viewBox='0 0 400 260'><rect width='400' height='260' fill='%23f1f5f9'/><polygon points='200,60 270,180 130,180' fill='%2310b981'/><text x='200' y='210' font-family='serif' font-size='16' text-anchor='middle' fill='%23475569'>样本 B：三角剖分剖面</text></svg>" alt="画廊样本 B">
+                  </div>
+                  <div class="gallery-item">
+                    <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='260' viewBox='0 0 400 260'><rect width='400' height='260' fill='%23f1f5f9'/><rect x='150' y='80' width='100' height='100' fill='%238b5cf6'/><text x='200' y='210' font-family='serif' font-size='16' text-anchor='middle' fill='%23475569'>样本 C：胞腔复形分解</text></svg>" alt="画廊样本 C">
+                  </div>
+                </div>
+
+                <h2 id="四-代码块语法高亮与一键复制">四、代码块语法高亮与一键复制</h2>
+                <p>代码区域采用汉仪仿宋等宽字体（ChineseMono）排版，带有行间距保护与右上角一键 Copy 交互：</p>
+
+                <h3 id="4-1-pytorch-多头注意力实现">4.1 PyTorch 多头注意力实现</h3>
+                <div class="highlight">
+                  <pre><code class="code python"><span class="hljs-keyword">import</span> torch
+<span class="hljs-keyword">import</span> torch.nn <span class="hljs-keyword">as</span> nn
+<span class="hljs-keyword">import</span> math
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ScaledDotProductAttention</span>(<span class="hljs-title">nn</span>.<span class="hljs-title">Module</span>):</span>
+    <span class="hljs-string">"""Scaled Dot-Product Attention in PyTorch"""</span>
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__init__</span><span class="hljs-params">(self, d_k: int)</span>:</span>
+        <span class="hljs-built_in">super</span>().__init__()
+        self.d_k = d_k
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">forward</span><span class="hljs-params">(self, q, k, v, mask=<span class="hljs-literal">None</span>)</span>:</span>
+        scores = torch.matmul(q, k.transpose(-<span class="hljs-number">2</span>, -<span class="hljs-number">1</span>)) / math.sqrt(self.d_k)
+        <span class="hljs-keyword">if</span> mask <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-literal">None</span>:
+            scores = scores.masked_fill(mask == <span class="hljs-number">0</span>, -<span class="hljs-number">1e9</span>)
+        weights = torch.softmax(scores, dim=-<span class="hljs-number">1</span>)
+        <span class="hljs-keyword">return</span> torch.matmul(weights, v), weights</code></pre>
+                </div>
+
+                <h2 id="五-双语引用块与排版细节">五、双语引用块与排版细节</h2>
+                <p>对于中英混排、名言箴句或文献引用，样式表设定了左侧经典墨线、斜体西文与行高呼吸：</p>
+                <blockquote>
+                  <p>“All models are wrong, but some are useful.”<br>
+                  —— 乔治·博克斯（George E. P. Box），统计学家的经验主义格言</p>
+                </blockquote>
+
+                <h3 id="5-1-右侧平行边注">5.1 右侧平行边注（Sidenote）</h3>
+                <p>
+                  边注（Marginalia）是经典书籍排版的皇冠<sup class="sidenote-ref">1</sup>。在宽屏下，边注会脱离正文在右侧外沿浮动，并与被引用的段落水平对齐，绝不打断读者的眼球流向。
+                  <span class="sidenote"><sup class="sidenote-num">1</sup>这是一个纯正的右侧平行边注。它平行于正文所在行，在宽屏下安放在右侧外围空白区，屏幕收窄时自适应下沉为优雅说明块。</span>
+                  读者无需滑动到页面底部去翻阅晦涩的脚注，视线向右微偏便能获知补充知识。
+                </p>
+
+                <h3 id="5-2-悬浮预览卡片">5.2 悬浮预览卡片（Hover Popover）</h3>
+                <p>
+                  另一种学术与维基式的做法是悬浮卡片。试着将鼠标悬停在这个专有名词上：
+                  <span class="hover-card-anchor">
+                    代数拓扑学（Algebraic Topology）
+                    <span class="hover-card">
+                      <strong>代数拓扑学</strong><br>
+                      利用抽象代数工具（同伦群、同调群）来研究拓扑空间在连续形变下的不变量。点击或悬停即可预览关联知识。
+                    </span>
+                  </span>
+                  ，它能弹出一个精致的无遮挡浮层，展示概念摘要或站内文章前瞻，极大降低了翻页成本。
+                </p>
+
+                <h2 id="六-结构化数据与表格测试">六、结构化数据与表格测试</h2>
+                <table>
+                  <thead>
+                    <tr><th>希腊词原形</th><th>字面原义</th><th>数学衍生概念</th><th>拓扑空间中的范畴对应</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>ὁμός <i>homos</i></td><td>相同</td><td>同态 (Homomorphism)、同伦 (Homotopy)</td><td>态射间的连续变形族</td></tr>
+                    <tr><td>ὅμοιος <i>homoios</i></td><td>相似</td><td>同胚 (Homeomorphism)</td><td>双向连续的双射同构</td></tr>
+                    <tr><td>ἴσος <i>isos</i></td><td>相等</td><td>同构 (Isomorphism)、等距 (Isometry)</td><td>代数结构的完全可逆等价</td></tr>
+                  </tbody>
+                </table>
+
+                <h2 id="七-大纲深度滚动压力测试">七、大纲深度滚动压力测试</h2>
+                <p>下面设立多个连续子小节，专门用于检验左侧浮动大纲高度超过屏幕视口（超过 10 级目录）时的内部自适应滚动与节点点亮情况：</p>
+
+                <h3 id="7-1-微局部分析与多重连通度">7.1 微局部分析与多重连通度</h3>
+                <p>当空间维度由有限维拓展至无限维希尔伯特流形时，路径连通与单连通性将呈现更加丰富的谱结构。</p>
+
+                <h3 id="7-2-切丛与主纤维丛结构">7.2 切丛与主纤维丛结构</h3>
+                <p>在规范场论中，联络形式 $A$ 描述了几何相位的平行移动，其曲率二形式 $F = dA + A \wedge A$ 即为场强张量。</p>
+
+                <h3 id="7-3-陈省身示性类与指标定理">7.3 陈省身示性类与指标定理</h3>
+                <p>Atiyah-Singer 指标定理揭示了解析分析（微分算子零点维数）与纯几何拓扑（积分示性类）之间不可思议的深刻桥梁。</p>
+
+                <h3 id="7-4-全景测试结论">7.4 全景测试结论</h3>
+                <p>至此，整个页面经受住了数学公式、多媒体图片、代码语法块、表格与超长多级大纲的完整考验。</p>
+
+              </div>
+              <footer class="article-footer"></footer>
+            </div>
+          </article>
+        </section>
+      </div>
+      <aside id="floating-toc"></aside>
+      <footer id="footer">
+        <div class="outer">
+          <div id="footer-info" class="inner">
+            &copy; 2026 Heptazero<br>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <nav id="mobile-nav">
+      <div class="mobile-nav-toc" style="display: none;">
+        <h3 class="widget-title">文章大纲</h3>
+        <div class="mobile-toc-container"></div>
+      </div>
+      <div class="mobile-nav-categories">
+        <h3 class="widget-title">标签树</h3>
+        <ul class="category-list tag-tree">
+          <li class="category-list-item tag-tree-open">
+            <span class="category-list-link tag-tree-toggle">个人</span>
+            <span class="category-list-count">1</span>
+            <ul class="category-list-child">
+              <li class="category-list-item">
+                <a class="category-list-link" href="../tags/杂谈.html">杂谈</a>
+                <span class="category-list-count">1</span>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="mobile-nav-tagcloud">
+        <h3 class="widget-title">标签词云</h3>
+        <a href="../tags/杂谈.html" style="font-size: 15px; color: #999">杂谈</a>
+      </div>
+    </nav>
+    <script src="../js/clipboard.min.js"></script>
+    <script src="../js/jquery-1.4.3.min.js"></script>
+    <script src="../js/script.js?v=2.3"></script>
+  </div>
+</body>
+</html>

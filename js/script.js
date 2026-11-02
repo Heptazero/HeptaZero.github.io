@@ -162,6 +162,51 @@
     }
     renderMathWithRetry();
 
+    // 5. 挂载与更新 Giscus 评论区
+    function loadGiscus() {
+      var commentsEl = document.getElementById('comments');
+      if (!commentsEl) return;
+
+      var iframe = document.querySelector('iframe.giscus-frame');
+      if (iframe) {
+        iframe.contentWindow.postMessage({
+          giscus: {
+            setConfig: {
+              term: window.location.pathname
+            }
+          }
+        }, 'https://giscus.app');
+        return;
+      }
+
+      var container = document.getElementById('giscus-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'giscus-container';
+        commentsEl.appendChild(container);
+      }
+      container.innerHTML = '';
+
+      var script = document.createElement('script');
+      script.src = 'https://giscus.app/client.js';
+      script.setAttribute('data-repo', 'Heptazero/HeptaZero.github.io');
+      script.setAttribute('data-repo-id', 'R_kgDOQ_vXng');
+      script.setAttribute('data-category', 'Announcements');
+      script.setAttribute('data-category-id', 'DIC_kwDOQ_vXns4DKLjj');
+      script.setAttribute('data-mapping', 'pathname');
+      script.setAttribute('data-strict', '0');
+      script.setAttribute('data-reactions-enabled', '1');
+      script.setAttribute('data-emit-metadata', '0');
+      script.setAttribute('data-input-position', 'top');
+      script.setAttribute('data-theme', 'light');
+      script.setAttribute('data-lang', 'zh-CN');
+      script.setAttribute('crossorigin', 'anonymous');
+      script.async = true;
+
+      container.appendChild(script);
+    }
+    loadGiscus();
+
     // 立即执行一次大纲高亮计算，确保打开页面即处于激活状态
     setTimeout(updateScrollSpy, 50);
   }

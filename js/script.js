@@ -337,12 +337,26 @@
             oldHeaderTitle.className = newHeaderTitle.className;
           }
 
+          // 2.5 原地替换顶栏（保持最新导航与高亮状态）
+          var newNavOuter = newDoc.getElementById('nav-outer');
+          var oldNavOuter = document.getElementById('nav-outer');
+          if (newNavOuter && oldNavOuter) {
+            oldNavOuter.innerHTML = newNavOuter.innerHTML;
+          }
+
           // 3. 原地替换正文内容区
           var newContent = newDoc.getElementById('content');
           var oldContent = document.getElementById('content');
           if (newContent && oldContent) {
             oldContent.innerHTML = newContent.innerHTML;
             oldContent.className = newContent.className;
+          }
+
+          // 3.5 原地替换侧边抽屉（确保大纲与侧栏内容同步）
+          var newMobileNav = newDoc.getElementById('mobile-nav');
+          var oldMobileNav = document.getElementById('mobile-nav');
+          if (newMobileNav && oldMobileNav) {
+            oldMobileNav.innerHTML = newMobileNav.innerHTML;
           }
 
           // 4. 原地同步大纲容器（仅当新页面为文章页且含有标题时才显示；About 与 Home 均不大纲化）

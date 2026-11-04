@@ -19,6 +19,15 @@
       }
     });
 
+    // 首页文章摘要超长截断渐隐标记（短篇绝不附带多余白边）
+    $('.article-entry.index-entry').each(function() {
+      if (this.clientHeight >= 115 && this.scrollHeight > this.clientHeight + 4) {
+        $(this).addClass('is-overflow');
+      } else {
+        $(this).removeClass('is-overflow');
+      }
+    });
+
     // 2. 代码块复制按钮
     var codes = document.getElementsByClassName('code');
     for (var i = 0; i < codes.length; ++i) {
@@ -60,7 +69,7 @@
           if (lvl < minLevel) minLevel = lvl;
         });
 
-        var tocHtml = '<div class="toc-header">目录</div><ol class="toc">';
+        var tocHtml = '<ol class="toc">';
         var currentTopLi = false;
         var inChildOl = false;
 
@@ -153,17 +162,21 @@
     }
     renderMathWithRetry();
 
-    // 5. 挂载与更新 Giscus 评论区
+    // 5. 挂载与更新 Giscus 评论区（Ask 页不挂载全局评论，由具体问答卡片独立承载）
     function loadGiscus() {
+      if ($('#ask-page').length || window.location.pathname.indexOf('ask.html') !== -1) return;
       var commentsEl = document.getElementById('comments');
       if (!commentsEl) return;
+
+      var currentTheme = getPreferredTheme() === 'dark' ? 'transparent_dark' : 'light';
 
       var iframe = document.querySelector('iframe.giscus-frame');
       if (iframe) {
         iframe.contentWindow.postMessage({
           giscus: {
             setConfig: {
-              term: window.location.pathname
+              term: window.location.pathname,
+              theme: currentTheme
             }
           }
         }, 'https://giscus.app');
@@ -189,7 +202,7 @@
       script.setAttribute('data-reactions-enabled', '1');
       script.setAttribute('data-emit-metadata', '0');
       script.setAttribute('data-input-position', 'top');
-      script.setAttribute('data-theme', 'light');
+      script.setAttribute('data-theme', currentTheme);
       script.setAttribute('data-lang', 'zh-CN');
       script.setAttribute('crossorigin', 'anonymous');
       script.async = true;
@@ -198,12 +211,153 @@
     }
     loadGiscus();
 
+    // 6. 移动端/窄屏平行边注自动转为文章末尾双向跳转移植
+    function initFootnotes() {
+      var $sidenotes = $('.article-entry .sidenote');
+      if (!$sidenotes.length) return;
+
+      var $articleEntry = $('.article-entry').first();
+      if (!$articleEntry.find('.article-footnotes').length) {
+        var $footnotesWrap = $('<div class="article-footnotes"><div class="footnotes-title">注解</div><ol class="footnotes-list"></ol></div>');
+        var $list = $footnotesWrap.find('.footnotes-list');
+
+        $sidenotes.each(function(index) {
+          var noteNum = index + 1;
+          var $note = $(this);
+          
+          // 提取纯注解文本（去掉原本内部的 sup 编号）
+          var noteHtml = $note.clone().find('.sidenote-num').remove().end().html().trim();
+
+          // 给正文中的引用点加上返回锚点与链接
+          var $prevRef = $note.prev('.sidenote-ref');
+          if ($prevRef.length) {
+            $prevRef.attr('id', 'fnref-' + noteNum);
+            $prevRef.html('<a href="#fn-' + noteNum + '" class="sidenote-anchor">' + noteNum + '</a>');
+          }
+
+          // 添加到末尾注解列表
+          var $item = $('<li id="fn-' + noteNum + '" class="footnote-item">' +
+                        '<span class="footnote-content">' + noteHtml + '</span> ' +
+                        '<a href="#fnref-' + noteNum + '" class="footnote-backref" title="跳回正文">↩</a>' +
+                        '</li>');
+          $list.append($item);
+        });
+
+        $articleEntry.append($footnotesWrap);
+      }
+    }
+    initFootnotes();
+
     // 立即执行一次大纲高亮计算，确保打开页面即处于激活状态
     setTimeout(updateScrollSpy, 50);
 
     // 渲染全站全局复用的侧边抽屉与顶栏活动状态
     renderGlobalMobileNav();
+    renderGlobalSubNav();
     updateNavActiveState();
+  }
+
+  // -------------------------------------------------------------
+  // 深色模式 (Dark Mode) 管理系统
+  // -------------------------------------------------------------
+  var THEME_KEY = 'heptazero_theme';
+
+  function getPreferredTheme() {
+    if (document.documentElement.classList.contains('dark-mode') || (document.body && document.body.classList.contains('dark-mode'))) {
+      return 'dark';
+    }
+    var stored = localStorage.getItem(THEME_KEY) || localStorage.getItem('theme');
+    if (stored === 'dark' || stored === 'light') return stored;
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+
+  function applyTheme(theme, persist) {
+    var isDark = (theme === 'dark');
+    document.documentElement.classList.toggle('dark-mode', isDark);
+    if (document.body) {
+      document.body.classList.toggle('dark-mode', isDark);
+    }
+    if (persist) {
+      localStorage.setItem(THEME_KEY, theme);
+      localStorage.setItem('theme', theme);
+    }
+    syncGiscusTheme(theme);
+  }
+
+  function toggleTheme() {
+    var current = document.documentElement.classList.contains('dark-mode') ? 'dark' : 'light';
+    var next = (current === 'dark') ? 'light' : 'dark';
+    applyTheme(next, true);
+  }
+
+  function syncGiscusTheme(theme) {
+    var iframe = document.querySelector('iframe.giscus-frame');
+    if (!iframe || !iframe.contentWindow) return;
+    iframe.contentWindow.postMessage({
+      giscus: {
+        setConfig: {
+          theme: (theme === 'dark') ? 'transparent_dark' : 'light'
+        }
+      }
+    }, 'https://giscus.app');
+  }
+
+  // 监听 Giscus 异步加载握手消息，确保首次加载即同步为 transparent_dark，根除白底方块
+  window.addEventListener('message', function(event) {
+    if (event.origin !== 'https://giscus.app') return;
+    if (event.data && typeof event.data === 'object' && event.data.giscus) {
+      var currentTheme = document.documentElement.classList.contains('dark-mode') ? 'dark' : 'light';
+      syncGiscusTheme(currentTheme);
+    }
+  });
+
+  // 监听操作系统深浅色设置变更
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+      if (!localStorage.getItem(THEME_KEY)) {
+        applyTheme(e.matches ? 'dark' : 'light', false);
+      }
+    });
+  }
+
+  // 立即在脚本解析时初次生效
+  applyTheme(getPreferredTheme(), false);
+
+  // -------------------------------------------------------------
+  // 站点通用提示 (Toast)
+  // -------------------------------------------------------------
+  function showToast(message) {
+    var existing = document.getElementById('site-toast');
+    if (existing) existing.remove();
+    var toast = document.createElement('div');
+    toast.id = 'site-toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(function() { toast.classList.add('show'); }, 10);
+    setTimeout(function() {
+      toast.classList.remove('show');
+      setTimeout(function() { toast.remove(); }, 300);
+    }, 2200);
+  }
+
+  // -------------------------------------------------------------
+  // 顶栏右侧辅助操作区组件（单点维护，支持深色切换、双语与联系展开）
+  // -------------------------------------------------------------
+  function renderGlobalSubNav() {
+    var $subNav = $('#sub-nav');
+    if (!$subNav.length) return;
+
+    var globeSvg = '<svg class="lang-icon-globe" viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>';
+    var sunMoonSvg = '<svg class="theme-icon-sun" viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg><svg class="theme-icon-moon" viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+
+    var html = '<div class="sub-nav-social">' +
+      '  <a id="nav-github-link" class="nav-icon" href="https://github.com/HeptaZero" target="_blank" rel="noopener" title="GitHub"></a>' +
+      '  <a id="nav-mail-link" class="nav-icon" href="mailto:1004752777@qq.com" title="Email"></a>' +
+      '</div>' +
+      '<button class="nav-btn lang-toggle-btn" title="切换语言 / Switch Language" type="button" aria-label="Toggle language">' + globeSvg + '</button>' +
+      '<button class="nav-btn theme-toggle-btn" title="切换深色/浅色模式 / Toggle Dark Mode" type="button" aria-label="Toggle theme">' + sunMoonSvg + '</button>';
+
+    $subNav.html(html);
   }
 
   // -------------------------------------------------------------
@@ -213,41 +367,57 @@
     var $mobileNav = $('#mobile-nav');
     if (!$mobileNav.length) return;
 
-    var html = '';
+    var scrollBodyHtml = '';
 
-    // 1. 若当前页面有目录生成，在抽屉顶部加入文章目录模块
-    var $toc = $('#floating-toc .toc');
-    if ($toc.length && $toc.children().length > 0) {
-      html += '<div class="mobile-nav-toc">';
-      html += '  <h3 class="widget-title">目录</h3>';
-      html += '  <div class="mobile-toc-container"><ol class="toc">' + $toc.html() + '</ol></div>';
-      html += '</div>';
-    }
+    // 1. 标签树模块 (Cloud 大纲同构层级结构)
+    scrollBodyHtml += '<div class="mobile-nav-categories">';
+    scrollBodyHtml += '  <h3 class="widget-title">标签树</h3>';
+    scrollBodyHtml += '  <div class="tag-tree-container">';
+    scrollBodyHtml += '    <ul class="category-list tag-tree">';
+    scrollBodyHtml += '      <li class="category-list-item tag-tree-open">';
+    scrollBodyHtml += '        <div class="category-item-row tag-tree-toggle" role="button">';
+    scrollBodyHtml += '          <span class="tag-tree-arrow">▾</span>';
+    scrollBodyHtml += '          <span class="category-list-name">个人</span>';
+    scrollBodyHtml += '          <span class="category-list-count">1</span>';
+    scrollBodyHtml += '        </div>';
+    scrollBodyHtml += '        <ul class="category-list-child">';
+    scrollBodyHtml += '          <li class="category-list-item">';
+    scrollBodyHtml += '            <a class="category-leaf-link" href="/tags/杂谈.html">';
+    scrollBodyHtml += '              <span class="tag-tree-dot"></span>';
+    scrollBodyHtml += '              <span class="category-list-name">杂谈</span>';
+    scrollBodyHtml += '              <span class="category-list-count">1</span>';
+    scrollBodyHtml += '            </a>';
+    scrollBodyHtml += '          </li>';
+    scrollBodyHtml += '        </ul>';
+    scrollBodyHtml += '      </li>';
+    scrollBodyHtml += '    </ul>';
+    scrollBodyHtml += '  </div>';
+    scrollBodyHtml += '</div>';
 
-    // 2. 标签树模块
-    html += '<div class="mobile-nav-categories">';
-    html += '  <h3 class="widget-title">标签树</h3>';
-    html += '  <ul class="category-list tag-tree">';
-    html += '    <li class="category-list-item tag-tree-open">';
-    html += '      <span class="category-list-link tag-tree-toggle">个人</span>';
-    html += '      <span class="category-list-count">1</span>';
-    html += '      <ul class="category-list-child">';
-    html += '        <li class="category-list-item">';
-    html += '          <a class="category-list-link" href="/tags/杂谈.html">杂谈</a>';
-    html += '          <span class="category-list-count">1</span>';
-    html += '        </li>';
-    html += '      </ul>';
-    html += '    </li>';
-    html += '  </ul>';
-    html += '</div>';
+    // 3. 标签词云模块（中间分界，独立下半区 38.2vh 面板）
+    var tagCloudHtml = '<div class="mobile-nav-tagcloud">';
+    tagCloudHtml += '  <h3 class="widget-title">标签词云</h3>';
+    tagCloudHtml += '  <div class="mobile-nav-tagcloud-inner">';
+    tagCloudHtml += '    <a href="/tags/杂谈.html">杂谈</a>';
+    tagCloudHtml += '  </div>';
+    tagCloudHtml += '</div>';
 
-    // 3. 标签词云模块
-    html += '<div class="mobile-nav-tagcloud">';
-    html += '  <h3 class="widget-title">标签词云</h3>';
-    html += '  <a href="/tags/杂谈.html" style="font-size: 15px; color: #999">杂谈</a>';
-    html += '</div>';
+    var globeSvg = '<svg class="lang-icon-globe" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>';
+    var sunMoonSvg = '<svg class="theme-icon-sun" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg><svg class="theme-icon-moon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
 
-    $mobileNav.html(html);
+    // 4. 移动端固定底部操作栏（PC 端 CSS 已设置为 display: none !important，绝不与顶栏重复）
+    var toolbarHtml = '<div class="mobile-nav-toolbar">' +
+      '<div class="mobile-nav-toolbar-left">' +
+      '  <a id="mobile-nav-github-link" class="nav-icon" href="https://github.com/HeptaZero" target="_blank" rel="noopener" title="GitHub"></a>' +
+      '  <a id="mobile-nav-mail-link" class="nav-icon" href="mailto:1004752777@qq.com" title="Email"></a>' +
+      '</div>' +
+      '<div class="mobile-nav-toolbar-right">' +
+      '  <button class="mobile-toolbar-btn lang-toggle-btn" title="切换语言 / Switch Language" type="button" aria-label="Toggle language">' + globeSvg + '</button>' +
+      '  <button class="mobile-toolbar-btn theme-toggle-btn" title="切换深色/浅色模式 / Toggle Dark Mode" type="button" aria-label="Toggle theme">' + sunMoonSvg + '</button>' +
+      '</div>' +
+      '</div>';
+
+    $mobileNav.html('<div class="mobile-nav-scroll-body">' + scrollBodyHtml + '</div>' + tagCloudHtml + toolbarHtml);
   }
 
   // -------------------------------------------------------------
@@ -292,6 +462,23 @@
 
   document.addEventListener('click', function(e) {
     var target = e.target;
+
+    // 切换深色/浅色模式（PC 顶栏与移动端抽屉底部通用）
+    var themeBtn = target.closest ? target.closest('.theme-toggle-btn') : null;
+    if (themeBtn) {
+      e.preventDefault();
+      toggleTheme();
+      return;
+    }
+
+    // 切换语言按钮（PC 顶栏与移动端抽屉底部通用）
+    var langBtn = target.closest ? target.closest('.lang-toggle-btn') : null;
+    if (langBtn) {
+      e.preventDefault();
+      showToast('英文版本正在整理中 / English version in progress...');
+      return;
+    }
+
     var toggleBtn = target.closest ? target.closest('#main-nav-toggle') : null;
     if (toggleBtn) {
       e.preventDefault();
@@ -334,6 +521,41 @@
       if (!inMobileNav) {
         $container.removeClass('mobile-nav-on');
       }
+    }
+  });
+
+  // PC 端鼠标悬停左上角菜单与浮窗卡片交互 (纯原生事件监听，0 依赖，丝滑展开与延时防抖关闭)
+  var navHoverTimer = null;
+  function isDesktopScreen() {
+    return window.innerWidth >= 811;
+  }
+
+  document.addEventListener('mouseover', function(e) {
+    if (!isDesktopScreen()) return;
+    var target = e.target;
+    var toggleBtn = target && target.closest ? target.closest('#main-nav-toggle') : null;
+    var mobileNav = target && target.closest ? target.closest('#mobile-nav') : null;
+    if (toggleBtn || mobileNav) {
+      if (navHoverTimer) {
+        clearTimeout(navHoverTimer);
+        navHoverTimer = null;
+      }
+      if (!$container.hasClass('mobile-nav-on')) {
+        $container.addClass('mobile-nav-on');
+      }
+    }
+  });
+
+  document.addEventListener('mouseout', function(e) {
+    if (!isDesktopScreen()) return;
+    var related = e.relatedTarget;
+    var inToggle = related && related.closest ? related.closest('#main-nav-toggle') : null;
+    var inNav = related && related.closest ? related.closest('#mobile-nav') : null;
+    if (!inToggle && !inNav) {
+      if (navHoverTimer) clearTimeout(navHoverTimer);
+      navHoverTimer = setTimeout(function() {
+        $container.removeClass('mobile-nav-on');
+      }, 180);
     }
   });
 

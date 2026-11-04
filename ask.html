@@ -43,14 +43,12 @@
           <article id="ask-page" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
             <div class="article-inner" style="border-bottom: none; background: transparent;">
               <header class="article-header">
-                <h1 class="p-name article-title" itemprop="headline name">Ask / 提问箱</h1>
+                <h1 class="p-name article-title" itemprop="headline name">Ask</h1>
               </header>
               <div class="e-content article-entry" itemprop="articleBody">
-                <p>这里是一个完全匿名的提问箱。你可以提出任何关于数学、深度学习、算法哲学、或生活杂谈的疑问。提问提交后不会直接公开，博主作答后会在此沉淀展示。</p>
-
                 <!-- 匿名提问卡片 -->
                 <div class="ask-box-wrap">
-                  <textarea id="ask-input" placeholder="写下你的疑问或想说的话……（支持中英文与 LaTeX 公式，完全匿名）" rows="4" maxlength="1000"></textarea>
+                  <textarea id="ask-input" placeholder="写下你想说的话或提问……（支持 LaTeX 公式）" rows="4" maxlength="1000"></textarea>
                   <div class="ask-box-footer">
                     <span id="ask-counter" class="ask-char-count">0 / 1000</span>
                     <button id="ask-submit-btn" class="ask-submit-btn">匿名投递</button>
@@ -58,10 +56,10 @@
                   <div id="ask-banner" class="ask-status-banner"></div>
                 </div>
 
-                <!-- 精选问答流 -->
-                <h2 id="qa-title" style="margin-top: 2em; border-bottom: 1.5px solid #000; padding-bottom: 8px;">精选问答</h2>
+                <!-- 问答流 -->
+                <h2 id="qa-title" style="margin-top: 2em; border-bottom: 1.5px solid #000; padding-bottom: 8px;">问答</h2>
                 <div id="qa-stream" class="qa-stream">
-                  <div class="qa-empty-state" id="qa-loading">正在拉取最新问答流……</div>
+                  <div class="qa-empty-state" id="qa-loading">正在拉取最新问答……</div>
                 </div>
 
                 <!-- 博主管理暗门 -->
@@ -80,7 +78,6 @@
           </article>
         </section>
       </div>
-      <aside id="floating-toc" style="display: none;"></aside>
       <footer id="footer">
         <div class="outer">
           <div id="footer-info" class="inner">
@@ -89,18 +86,7 @@
         </div>
       </footer>
     </div>
-    <nav id="mobile-nav">
-      <div class="mobile-nav-categories">
-        <h3 class="widget-title">导航</h3>
-        <ul>
-          <li><a href="/index.html">Home</a></li>
-          <li><a href="/archives.html">Archives</a></li>
-          <li><a href="/log.html">Log</a></li>
-          <li><a href="/ask.html">Ask</a></li>
-          <li><a href="/about.html">About</a></li>
-        </ul>
-      </div>
-    </nav>
+    <nav id="mobile-nav"></nav>
     <div id="mobile-nav-dim"></div>
   </div>
 

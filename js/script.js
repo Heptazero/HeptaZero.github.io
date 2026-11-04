@@ -291,6 +291,17 @@
 
     // 8. 悬浮预览卡片动态几何中心定位与屏幕边界约束（防超出视口，支持移动端轻触切换）
     function initHoverCards() {
+      function closeAllCards() {
+        document.querySelectorAll('.hover-card-anchor').forEach(function(a) {
+          a.classList.remove('is-active');
+          var c = a.querySelector('.hover-card');
+          if (c) {
+            c.style.opacity = '';
+            c.style.pointerEvents = '';
+          }
+        });
+      }
+
       function positionCard(anchorEl) {
         var cardEl = anchorEl.querySelector('.hover-card');
         if (!cardEl) return;
@@ -338,33 +349,37 @@
         anchor.addEventListener('click', function(e) {
           e.stopPropagation();
           var wasActive = anchor.classList.contains('is-active');
-          document.querySelectorAll('.hover-card-anchor').forEach(function(a) {
-            a.classList.remove('is-active');
-            var c = a.querySelector('.hover-card');
-            if (c) { c.style.opacity = ''; c.style.pointerEvents = ''; }
-          });
+          closeAllCards();
           if (!wasActive) {
-            anchor.classList.add('is-active');
             positionCard(anchor);
+            anchor.classList.add('is-active');
             var card = anchor.querySelector('.hover-card');
-            if (card) { card.style.opacity = '1'; card.style.pointerEvents = 'auto'; }
+            if (card) {
+              card.style.opacity = '1';
+              card.style.pointerEvents = 'auto';
+            }
           }
         });
       });
 
       if (!window.__hoverCardDocClickAttached) {
         window.__hoverCardDocClickAttached = true;
-        document.addEventListener('click', function(e) {
+        // 移动端滚动/触控滑动时立即收起悬浮卡片，彻底消除“不随翻动划走”与“悬浮在很上方”的问题
+        window.addEventListener('scroll', closeAllCards, { passive: true });
+        window.addEventListener('touchmove', closeAllCards, { passive: true });
+
+        // iOS Safari 兼容：点击/触控正文任意空白处立即收起卡片
+        var handleDismiss = function(e) {
           if (!e.target.closest || !e.target.closest('.hover-card-anchor')) {
-            document.querySelectorAll('.hover-card-anchor').forEach(function(a) {
-              a.classList.remove('is-active');
-              var c = a.querySelector('.hover-card');
-              if (c) { c.style.opacity = ''; c.style.pointerEvents = ''; }
-            });
+            closeAllCards();
           }
-        });
+        };
+        document.addEventListener('click', handleDismiss);
+        document.addEventListener('touchstart', handleDismiss, { passive: true });
+        document.addEventListener('pointerdown', handleDismiss, { passive: true });
+
         window.addEventListener('resize', function() {
-          document.querySelectorAll('.hover-card-anchor').forEach(positionCard);
+          document.querySelectorAll('.hover-card-anchor.is-active').forEach(positionCard);
         });
       }
     }
@@ -633,7 +648,30 @@
 
     var tocLink = target.closest ? target.closest('.mobile-nav-toc .toc-link') : null;
     if (tocLink) {
+      var href = tocLink.getAttribute('href');
       $container.removeClass('mobile-nav-on');
+      if (href && href.charAt(0) === '#') {
+        e.preventDefault();
+        var rawId = href.substring(1);
+        try {
+          var targetId = decodeURIComponent(rawId);
+          var targetEl = document.getElementById(targetId);
+          if (targetEl) {
+            setTimeout(function() {
+              var topPos = $(targetEl).offset().top - 70;
+              $('html, body').stop().animate({ scrollTop: Math.max(0, topPos) }, 320);
+              if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', href);
+              }
+              var $t = $(targetEl);
+              $t.addClass('footnote-highlight');
+              setTimeout(function() {
+                $t.removeClass('footnote-highlight');
+              }, 1200);
+            }, 80);
+          }
+        } catch(err) {}
+      }
       return;
     }
 

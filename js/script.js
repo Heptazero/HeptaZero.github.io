@@ -47,9 +47,10 @@
     var $floatingToc = $('#floating-toc');
     var isHome = $('#content').hasClass('is-home');
     var isAbout = $('.article-type-about').length > 0 || window.location.pathname.indexOf('about.html') !== -1;
+    var isAsk = $('#ask-page').length > 0 || window.location.pathname.indexOf('ask.html') !== -1;
     var $entry = $('.article-entry');
 
-    if (!isHome && !isAbout && $floatingToc.length && $entry.length) {
+    if (!isHome && !isAbout && !isAsk && $floatingToc.length && $entry.length) {
       var $headings = $entry.find('h1, h2, h3, h4');
       if ($headings.length) {
         // 计算文章最高层级（有些从 h2 起步，有些如 blog-vision 从 h3 起步）
@@ -59,7 +60,7 @@
           if (lvl < minLevel) minLevel = lvl;
         });
 
-        var tocHtml = '<div class="toc-header">大纲</div><ol class="toc">';
+        var tocHtml = '<div class="toc-header">目录</div><ol class="toc">';
         var currentTopLi = false;
         var inChildOl = false;
 
@@ -106,20 +107,11 @@
         }
         tocHtml += '</ol>';
         $floatingToc.html(tocHtml).show();
-
-        // 同步到手机端侧边栏抽屉
-        var $mobileToc = $('.mobile-nav-toc');
-        if ($mobileToc.length) {
-          $mobileToc.find('.mobile-toc-container').html('<ol class="toc">' + $floatingToc.find('.toc').html() + '</ol>');
-          $mobileToc.show();
-        }
       } else {
         $floatingToc.empty().hide();
-        $('.mobile-nav-toc').hide();
       }
     } else if ($floatingToc.length) {
       $floatingToc.empty().hide();
-      $('.mobile-nav-toc').hide();
     }
 
     // 4. KaTeX 数学公式自动渲染（带重试等待机制）
@@ -208,6 +200,71 @@
 
     // 立即执行一次大纲高亮计算，确保打开页面即处于激活状态
     setTimeout(updateScrollSpy, 50);
+
+    // 渲染全站全局复用的侧边抽屉与顶栏活动状态
+    renderGlobalMobileNav();
+    updateNavActiveState();
+  }
+
+  // -------------------------------------------------------------
+  // 全局移动端侧边抽屉组件（单点维护，全站 0 构建复用）
+  // -------------------------------------------------------------
+  function renderGlobalMobileNav() {
+    var $mobileNav = $('#mobile-nav');
+    if (!$mobileNav.length) return;
+
+    var html = '';
+
+    // 1. 若当前页面有目录生成，在抽屉顶部加入文章目录模块
+    var $toc = $('#floating-toc .toc');
+    if ($toc.length && $toc.children().length > 0) {
+      html += '<div class="mobile-nav-toc">';
+      html += '  <h3 class="widget-title">目录</h3>';
+      html += '  <div class="mobile-toc-container"><ol class="toc">' + $toc.html() + '</ol></div>';
+      html += '</div>';
+    }
+
+    // 2. 标签树模块
+    html += '<div class="mobile-nav-categories">';
+    html += '  <h3 class="widget-title">标签树</h3>';
+    html += '  <ul class="category-list tag-tree">';
+    html += '    <li class="category-list-item tag-tree-open">';
+    html += '      <span class="category-list-link tag-tree-toggle">个人</span>';
+    html += '      <span class="category-list-count">1</span>';
+    html += '      <ul class="category-list-child">';
+    html += '        <li class="category-list-item">';
+    html += '          <a class="category-list-link" href="/tags/杂谈.html">杂谈</a>';
+    html += '          <span class="category-list-count">1</span>';
+    html += '        </li>';
+    html += '      </ul>';
+    html += '    </li>';
+    html += '  </ul>';
+    html += '</div>';
+
+    // 3. 标签词云模块
+    html += '<div class="mobile-nav-tagcloud">';
+    html += '  <h3 class="widget-title">标签词云</h3>';
+    html += '  <a href="/tags/杂谈.html" style="font-size: 15px; color: #999">杂谈</a>';
+    html += '</div>';
+
+    $mobileNav.html(html);
+  }
+
+  // -------------------------------------------------------------
+  // 顶栏主导航高亮同步
+  // -------------------------------------------------------------
+  function updateNavActiveState() {
+    var path = window.location.pathname;
+    var filename = path.split('/').pop().split('?')[0].split('#')[0] || 'index.html';
+    $('.main-nav-link').each(function() {
+      var href = $(this).attr('href') || '';
+      var targetName = href.split('/').pop().split('?')[0].split('#')[0];
+      if (targetName === filename || ((filename === 'index.html' || filename === '') && (targetName === 'index.html' || targetName === ''))) {
+        $(this).addClass('current');
+      } else {
+        $(this).removeClass('current');
+      }
+    });
   }
 
   // 手机端侧边栏基础交互
@@ -258,6 +315,18 @@
     if (tocLink) {
       $container.removeClass('mobile-nav-on');
       return;
+    }
+
+    var tagToggle = target.closest ? target.closest('.tag-tree-toggle') : null;
+    if (tagToggle) {
+      var item = tagToggle.closest('.category-list-item');
+      if (item) item.classList.toggle('tag-tree-open');
+      return;
+    }
+
+    var mobileNavLink = target.closest ? target.closest('#mobile-nav a') : null;
+    if (mobileNavLink) {
+      $container.removeClass('mobile-nav-on');
     }
 
     if ($container.hasClass('mobile-nav-on')) {
@@ -401,11 +470,6 @@
     }
   });
 
-  // 标签树折叠/展开
-  $('.tag-tree-toggle').click(function () {
-    $(this).closest('.category-list-item').toggleClass('tag-tree-open');
-  });
-
   // -------------------------------------------------------------
   // PJAX: 平滑无感切页引擎（消除全页刷新白屏，顶栏与字体原地不动）
   // -------------------------------------------------------------
@@ -450,18 +514,12 @@
             oldContent.innerHTML = newContent.innerHTML;
             oldContent.className = newContent.className;
           }
-
-          // 3.5 原地替换侧边抽屉（确保大纲与侧栏内容同步）
-          var newMobileNav = newDoc.getElementById('mobile-nav');
-          var oldMobileNav = document.getElementById('mobile-nav');
-          if (newMobileNav && oldMobileNav) {
-            oldMobileNav.innerHTML = newMobileNav.innerHTML;
-          }
           $container.removeClass('mobile-nav-on');
 
-          // 4. 原地同步大纲容器（仅当新页面为文章页且含有标题时才显示；About 与 Home 均不大纲化）
+          // 4. 原地同步大纲容器（仅当新页面为文章页且含有标题时才显示；About、Ask 与 Home 均不大纲化）
           var isAboutPage = url.indexOf('about.html') !== -1 || !!newDoc.querySelector('.article-type-about');
-          var hasHeadings = !isAboutPage && !!newDoc.querySelector('.not-home .article-entry h1, .not-home .article-entry h2, .not-home .article-entry h3');
+          var isAskPage = url.indexOf('ask.html') !== -1 || !!newDoc.querySelector('#ask-page');
+          var hasHeadings = !isAboutPage && !isAskPage && !!newDoc.querySelector('.not-home .article-entry h1, .not-home .article-entry h2, .not-home .article-entry h3');
           var oldFloatingToc = document.getElementById('floating-toc');
           if (!oldFloatingToc) {
             oldFloatingToc = document.createElement('aside');
@@ -493,7 +551,7 @@
           });
 
           // 6. 更新历史记录并滚到顶部（若有锚点 hash 则滚到锚点）
-          if (isPush) {
+          if (isPush !== false) {
             window.history.pushState({ pjax: true, url: url }, document.title, url);
           }
           if (url.indexOf('#') !== -1) {
@@ -516,24 +574,29 @@
         });
     }
 
+    window.pjaxNavigate = pjaxLoad;
+
     // 拦截站内链接（彻底排除图片、灯箱链接和外部锚点）
-    $(document).delegate('a', 'click', function(e) {
-      var href = $(this).attr('href');
-      var target = $(this).attr('target');
+    document.addEventListener('click', function(e) {
+      var a = e.target.closest ? e.target.closest('a') : null;
+      if (!a) return;
+
+      var href = a.getAttribute('href');
+      var target = a.getAttribute('target');
 
       if (!href || href.indexOf('#') === 0 || href.indexOf('mailto:') === 0 || href.indexOf('javascript:') === 0 || target === '_blank') {
         return;
       }
       // 避免拦截图片灯箱及图片数据，防止大纲消失
-      if ($(this).hasClass('fancybox') || $(this).attr('data-fancybox') || href.indexOf('data:image') === 0 || href.match(/\.(jpeg|jpg|gif|png|svg|webp|bmp)($|\?)/i)) {
+      if (a.classList.contains('fancybox') || a.hasAttribute('data-fancybox') || href.indexOf('data:image') === 0 || href.match(/\.(jpeg|jpg|gif|png|svg|webp|bmp)($|\?)/i)) {
         return;
       }
-      if (this.hostname && this.hostname !== window.location.hostname) {
+      if (a.hostname && a.hostname !== window.location.hostname) {
         return;
       }
 
       e.preventDefault();
-      pjaxLoad(this.href, true);
+      pjaxLoad(a.href, true);
     });
 
     // 监听后退/前进

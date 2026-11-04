@@ -2954,3 +2954,224 @@ html {
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
+
+/* =========================================
+   提问箱 (Ask / Q&A) 专属精致样式
+   ========================================= */
+.ask-box-wrap {
+  margin: 1.5em 0 2.5em;
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+}
+.ask-box-wrap textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 12px 14px;
+  font: 15px/1.6 "Noto Serif SC", "Songti SC", "Source Han Serif SC", "STSong", "SimSun", serif;
+  color: #1f2937;
+  background: #fff;
+  resize: vertical;
+  min-height: 90px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.ask-box-wrap textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+.ask-box-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+.ask-char-count {
+  font-size: 13px;
+  color: #9ca3af;
+  font-family: ChineseMono, monospace;
+}
+.ask-submit-btn {
+  background: #111827;
+  color: #fff;
+  border: none;
+  padding: 7px 18px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+.ask-submit-btn:hover {
+  background: #374151;
+  transform: translateY(-1px);
+}
+.ask-submit-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+.ask-status-banner {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  display: none;
+}
+.ask-status-banner.success {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  display: block;
+}
+.ask-status-banner.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  display: block;
+}
+
+/* 问答列表流 */
+.qa-stream {
+  margin-top: 2em;
+}
+.qa-card {
+  margin-bottom: 2em;
+  padding: 20px 24px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  transition: box-shadow 0.2s;
+}
+.qa-card:hover {
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
+}
+.qa-question-section {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed #e5e7eb;
+}
+.qa-badge-q {
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.qa-question-text {
+  flex-grow: 1;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #111827;
+  font-weight: 600;
+}
+.qa-meta-time {
+  font-size: 12px;
+  color: #9ca3af;
+  font-family: ChineseMono, monospace;
+  margin-top: 4px;
+  display: block;
+}
+.qa-answer-section {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 14px;
+}
+.qa-badge-a {
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.qa-answer-text {
+  flex-grow: 1;
+  font-size: 15.5px;
+  line-height: 1.75;
+  color: #374151;
+}
+.qa-empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #9ca3af;
+  font-size: 15px;
+}
+.qa-admin-trigger-wrap {
+  text-align: right;
+  margin: 20px 0;
+}
+.qa-admin-key {
+  color: #d1d5db;
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.qa-admin-key:hover {
+  color: #6b7280;
+}
+.qa-admin-panel {
+  display: none;
+  margin: 2em 0;
+  padding: 20px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+.qa-admin-panel.active {
+  display: block;
+}
+.qa-admin-pending-item {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.qa-admin-reply-box {
+  width: 100%;
+  margin: 10px 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.qa-admin-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.qa-btn-publish {
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.qa-btn-delete {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}

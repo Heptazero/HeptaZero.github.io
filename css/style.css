@@ -79,6 +79,7 @@ body:after {
   text-align: left !important;
   text-justify: auto !important;
   letter-spacing: normal !important;
+  scroll-margin-top: 75px !important;
 }
 .article-entry h1,
 .widget h1 {
@@ -2214,13 +2215,14 @@ body.dark-mode .article-entry.index-entry.is-overflow:after {
 }
 .article-entry pre,
 .article-entry .highlight {
-  background: #fff;
-  margin: 0;
+  background: #f5f2f0;
+  margin: 20px 0;
   border-style: solid;
-  border-color: #ddd;
+  border-color: #e0dedc;
   border-width: 1px;
+  border-radius: 8px;
   overflow: auto;
-  color: #4d4d4c;
+  color: #2d3748;
   line-height: 25.6px;
 }
 .article-entry .gist .gist-file .gist-data .line-numbers {
@@ -2234,15 +2236,18 @@ body.dark-mode .article-entry.index-entry.is-overflow:after {
   line-height: 1.55;
 }
 .article-entry code {
-  background: #fff;
-  text-shadow: 0 1px #fff;
-  padding: 0 0.3em;
+  background: #f5f2f0;
+  color: #990055;
+  text-shadow: none;
+  padding: 2px 5px;
+  border-radius: 4px;
 }
 .article-entry pre {
-  padding: 15px;
+  padding: 16px 18px;
 }
 .article-entry pre code {
   background: none;
+  color: #2d3748;
   text-shadow: none;
   padding: 0;
 }
@@ -2254,7 +2259,7 @@ body.dark-mode .article-entry.index-entry.is-overflow:after {
 .article-entry .highlight pre {
   border: none;
   margin: 0;
-  padding: 15px;
+  padding: 16px 18px;
 }
 .article-entry .gist {
   margin: 0 -15px;
@@ -2302,115 +2307,115 @@ body.dark-mode .article-entry.index-entry.is-overflow:after {
 .article-entry .gist .gist-file .gist-meta a:hover {
   text-decoration: underline;
 }
+
+/* 日间代码高亮：经典 Prism 调色盘（与日间群青、暗夜品红高度呼应） */
 pre .hljs-comment,
-pre .hljs-title {
-  color: #8e908c;
-}
-pre .hljs-variable,
-pre .hljs-attribute,
-pre .hljs-tag,
-pre .hljs-regexp,
-pre .hljs-ruby .hljs-constant,
-pre .hljs-xml .hljs-tag .hljs-title,
-pre .hljs-xml .hljs-pi,
-pre .hljs-xml .hljs-doctype,
-pre .hljs-html .hljs-doctype,
-pre .hljs-css .hljs-id,
-pre .hljs-css .hljs-class,
-pre .hljs-css .hljs-pseudo {
-  color: #c82829;
-}
-pre .hljs-number,
-pre .hljs-preprocessor,
-pre .hljs-built_in,
-pre .hljs-literal,
-pre .hljs-params,
-pre .hljs-constant {
-  color: #f5871f;
-}
-pre .hljs-class,
-pre .hljs-ruby .hljs-class .hljs-title,
-pre .hljs-css .hljs-rules .hljs-attribute {
-  color: #718c00;
-}
-pre .hljs-string,
-pre .hljs-value,
-pre .hljs-inheritance,
-pre .hljs-header,
-pre .hljs-ruby .hljs-symbol,
-pre .hljs-xml .hljs-cdata {
-  color: #718c00;
-}
-pre .hljs-css .hljs-hexcolor {
-  color: #3e999f;
-}
-pre .hljs-function,
-pre .hljs-python .hljs-decorator,
-pre .hljs-python .hljs-title,
-pre .hljs-ruby .hljs-function .hljs-title,
-pre .hljs-ruby .hljs-title .hljs-keyword,
-pre .hljs-perl .hljs-sub,
-pre .hljs-javascript .hljs-title,
-pre .hljs-coffeescript .hljs-title {
-  color: #4271ae;
+pre .hljs-quote {
+  color: #708090;
+  font-style: italic;
 }
 pre .hljs-keyword,
-pre .hljs-javascript .hljs-function {
-  color: #8959a8;
+pre .hljs-selector-tag,
+pre .hljs-tag,
+pre .hljs-built_in,
+pre .hljs-type {
+  color: #0077aa;
+}
+pre .hljs-number,
+pre .hljs-literal,
+pre .hljs-constant,
+pre .hljs-boolean {
+  color: #990055;
+}
+pre .hljs-string,
+pre .hljs-symbol,
+pre .hljs-value {
+  color: #669900;
+}
+pre .hljs-title,
+pre .hljs-title.function_,
+pre .hljs-function,
+pre .hljs-class {
+  color: #2d3748;
+  font-weight: 600;
+}
+pre .hljs-variable,
+pre .hljs-params,
+pre .hljs-attr,
+pre .hljs-attribute {
+  color: #2d3748;
+}
+pre .hljs-operator,
+pre .hljs-punctuation {
+  color: #9a6e3a;
 }
 #mobile-nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 280px;
-  height: 100%;
-  height: 100dvh;
+  position: fixed !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: auto !important;
+  width: 78vw !important;
+  max-width: 300px !important;
+  height: auto !important;
+  height: 100% !important;
+  height: 100dvh !important;
+  height: -webkit-fill-available !important;
+  box-sizing: border-box !important;
+  padding-top: max(20px, env(safe-area-inset-top)) !important;
   background: #fff;
   border-right: 1px solid #e2e8f0;
-  box-shadow: 4px 0 30px rgba(0, 0, 0, 0.12);
+  box-shadow: 4px 0 30px rgba(0, 0, 0, 0.15);
   -webkit-transform: translateX(-100%);
   transform: translateX(-100%);
   -webkit-transition: -webkit-transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease, border-color 0.3s ease;
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease, border-color 0.3s ease;
   will-change: transform;
   z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
 }
 #mobile-nav-dim {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.25);
-  z-index: 9998;
+  position: fixed !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100vw !important;
+  height: 100% !important;
+  height: 100dvh !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  -webkit-backdrop-filter: blur(3px) !important;
+  backdrop-filter: blur(3px) !important;
+  z-index: 9998 !important;
   opacity: 0;
   pointer-events: none;
   -webkit-transition: opacity 0.3s ease;
   transition: opacity 0.3s ease;
 }
 .mobile-nav-on #mobile-nav-dim {
-  opacity: 1;
-  pointer-events: auto;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 .mobile-nav-on #mobile-nav {
-  -webkit-transform: translateX(0);
-  transform: translateX(0);
+  -webkit-transform: translateX(0) !important;
+  transform: translateX(0) !important;
 }
 @media screen and (max-width: 470px) {
   #mobile-nav {
-    width: 75vw;
-    max-width: 300px;
+    width: 78vw !important;
+    max-width: 300px !important;
   }
 }
 
 /* 侧边抽屉滑动主体（上下边界带渐隐雾化 Mist Gradient 效果） */
 .mobile-nav-scroll-body {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  height: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0px, black 24px, black calc(100% - 24px), transparent 100%);
   mask-image: linear-gradient(to bottom, transparent 0px, black 24px, black calc(100% - 24px), transparent 100%);
   padding: 10px 0;
@@ -2634,9 +2639,10 @@ pre .hljs-javascript .hljs-function {
     display: -webkit-box !important;
     display: -webkit-flex !important;
     display: flex !important;
-    flex-shrink: 0;
-    height: 52px;
-    padding: 0 16px;
+    flex-shrink: 0 !important;
+    height: 52px !important;
+    box-sizing: content-box !important;
+    padding: 0 16px max(16px, env(safe-area-inset-bottom)) 16px !important;
     border-top: none;
     background: #fff;
     -webkit-box-pack: justify;
@@ -4068,11 +4074,11 @@ html.dark-mode .katex {
 
 /* 抽屉 Dark Mode */
 html.dark-mode #mobile-nav {
-  background: #18191c;
-  border-right-color: #2e323b;
+  background: #18191c !important;
+  border-right-color: #2e323b !important;
 }
 html.dark-mode #mobile-nav-dim {
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.65) !important;
 }
 html.dark-mode .mobile-nav-categories h3.widget-title,
 html.dark-mode .mobile-nav-toc .widget-title {
@@ -4131,14 +4137,17 @@ html.dark-mode .mobile-nav-toc {
 html.dark-mode .mobile-nav-toc .toc {
   border-left-color: #2e323b;
 }
-html.dark-mode .mobile-nav-toc .toc-link {
-  color: #94a3b8;
+html.dark-mode .mobile-nav-toc .toc-link,
+html.dark-mode .mobile-nav-toc .toc-text {
+  color: #cbd5e1 !important;
 }
-html.dark-mode .mobile-nav-toc .toc-link.active {
+html.dark-mode .mobile-nav-toc .toc-link.active,
+html.dark-mode .mobile-nav-toc .toc-link.active .toc-text {
   color: #ff2d75 !important;
   font-weight: 700;
 }
-html.dark-mode .mobile-nav-toc .toc-link:hover {
+html.dark-mode .mobile-nav-toc .toc-link:hover,
+html.dark-mode .mobile-nav-toc .toc-link:hover .toc-text {
   color: #ff2d75 !important;
 }
 html.dark-mode .mobile-nav-toc .toc-dot {
@@ -4150,7 +4159,7 @@ html.dark-mode .mobile-nav-toc .toc-link.active .toc-dot {
 }
 @media screen and (max-width: 600px) {
   html.dark-mode .mobile-nav-toolbar {
-    background: #18191c;
+    background: #18191c !important;
     border-top: none;
   }
 }

@@ -1,8 +1,19 @@
 (function($){
+  var currentArticleTocHtml = null;
+
   // -------------------------------------------------------------
   // 页面正文组件初始化（图片灯箱、大纲自动生成、滚动监听、代码复制、KaTeX）
   // -------------------------------------------------------------
   function initPage() {
+    // 0. 确保页面及正文容器具备多语言自动连字符排版语言标识 (lang="en")
+    if (!document.documentElement.getAttribute('lang')) {
+      document.documentElement.setAttribute('lang', 'zh-CN');
+    }
+    if (document.body && !document.body.getAttribute('lang')) {
+      document.body.setAttribute('lang', 'en');
+    }
+    $('.article-entry').attr('lang', 'en');
+
     // 1. Caption 自动提取与表格横向滚动封装
     $('.article-entry, .article-inner').each(function(i){
       $(this).find('img').each(function(){
@@ -58,6 +69,7 @@
     var isAbout = $('.article-type-about').length > 0 || window.location.pathname.indexOf('about.html') !== -1;
     var isAsk = $('#ask-page').length > 0 || window.location.pathname.indexOf('ask.html') !== -1;
     var $entry = $('.article-entry');
+    var articleTocHtml = null;
 
     if (!isHome && !isAbout && !isAsk && $floatingToc.length && $entry.length) {
       var $headings = $entry.find('h1, h2, h3, h4');
@@ -115,6 +127,7 @@
           tocHtml += '</li>';
         }
         tocHtml += '</ol>';
+        articleTocHtml = tocHtml;
         $floatingToc.html(tocHtml).show();
       } else {
         $floatingToc.empty().hide();
@@ -122,6 +135,7 @@
     } else if ($floatingToc.length) {
       $floatingToc.empty().hide();
     }
+    currentArticleTocHtml = articleTocHtml;
 
     // 4. KaTeX 数学公式自动渲染（带重试等待机制）
     function renderMathWithRetry() {
@@ -211,7 +225,7 @@
     }
     loadGiscus();
 
-    // 6. 移动端/窄屏平行边注自动转为文章末尾双向跳转移植
+    // 6. 移动端/窄屏平行边注自动转为文章末尾双向跳转移植与极简矢量返回图标
     function initFootnotes() {
       var $sidenotes = $('.article-entry .sidenote');
       if (!$sidenotes.length) return;
@@ -235,10 +249,11 @@
             $prevRef.html('<a href="#fn-' + noteNum + '" class="sidenote-anchor">' + noteNum + '</a>');
           }
 
-          // 添加到末尾注解列表
+          // 添加到末尾注解列表（使用极简返回 SVG 矢量图标替代粗糙 emoji ↩）
+          var backIconSvg = '<svg class="footnote-back-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>';
           var $item = $('<li id="fn-' + noteNum + '" class="footnote-item">' +
                         '<span class="footnote-content">' + noteHtml + '</span> ' +
-                        '<a href="#fnref-' + noteNum + '" class="footnote-backref" title="跳回正文">↩</a>' +
+                        '<a href="#fnref-' + noteNum + '" class="footnote-backref" title="跳回正文">' + backIconSvg + '</a>' +
                         '</li>');
           $list.append($item);
         });
@@ -247,6 +262,113 @@
       }
     }
     initFootnotes();
+
+    // 7. 边注与末尾脚注双向平滑跳转定位与闪烁高亮（严禁触发 PJAX 整页刷新或滚回顶部）
+    if (!window.__footnoteJumpHandlerAttached) {
+      window.__footnoteJumpHandlerAttached = true;
+      document.addEventListener('click', function(e) {
+        var anchor = e.target.closest ? e.target.closest('.sidenote-anchor, .footnote-backref') : null;
+        if (!anchor) return;
+        var href = anchor.getAttribute('href');
+        if (!href || href.charAt(0) !== '#') return;
+        e.preventDefault();
+        var targetId = decodeURIComponent(href.substring(1));
+        var targetEl = document.getElementById(targetId);
+        if (targetEl) {
+          var topPos = $(targetEl).offset().top - 80;
+          $('html, body').stop().animate({ scrollTop: Math.max(0, topPos) }, 320);
+          if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, '', href);
+          }
+          var $t = $(targetEl);
+          $t.addClass('footnote-highlight');
+          setTimeout(function() {
+            $t.removeClass('footnote-highlight');
+          }, 1200);
+        }
+      });
+    }
+
+    // 8. 悬浮预览卡片动态几何中心定位与屏幕边界约束（防超出视口，支持移动端轻触切换）
+    function initHoverCards() {
+      function positionCard(anchorEl) {
+        var cardEl = anchorEl.querySelector('.hover-card');
+        if (!cardEl) return;
+        var rect = anchorEl.getBoundingClientRect();
+        var winW = window.innerWidth;
+        var cardW = Math.min(270, winW - 32);
+
+        // 取划线位置最左与最右的几何正中心
+        var anchorCenter = (rect.left + rect.right) / 2;
+        var cardLeft = anchorCenter - cardW / 2;
+
+        // 边界约束：两端严格保留至少 16px 安全距离，严禁超出手机屏幕
+        cardLeft = Math.max(16, Math.min(cardLeft, winW - cardW - 16));
+
+        cardEl.style.position = 'fixed';
+        cardEl.style.boxSizing = 'border-box';
+        cardEl.style.width = cardW + 'px';
+        cardEl.style.left = cardLeft + 'px';
+        cardEl.style.transform = 'none';
+
+        // 垂直上下智能翻转
+        var cardH = cardEl.offsetHeight || 120;
+        if (rect.top - cardH - 12 > 10) {
+          cardEl.style.top = 'auto';
+          cardEl.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+        } else {
+          cardEl.style.bottom = 'auto';
+          cardEl.style.top = (rect.bottom + 8) + 'px';
+        }
+      }
+
+      document.querySelectorAll('.hover-card-anchor').forEach(function(anchor) {
+        // 预先计算初始几何中心与边界约束
+        positionCard(anchor);
+
+        anchor.addEventListener('mouseenter', function() {
+          positionCard(anchor);
+        });
+        anchor.addEventListener('mouseover', function() {
+          positionCard(anchor);
+        });
+        anchor.addEventListener('touchstart', function() {
+          positionCard(anchor);
+        }, { passive: true });
+        anchor.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var wasActive = anchor.classList.contains('is-active');
+          document.querySelectorAll('.hover-card-anchor').forEach(function(a) {
+            a.classList.remove('is-active');
+            var c = a.querySelector('.hover-card');
+            if (c) { c.style.opacity = ''; c.style.pointerEvents = ''; }
+          });
+          if (!wasActive) {
+            anchor.classList.add('is-active');
+            positionCard(anchor);
+            var card = anchor.querySelector('.hover-card');
+            if (card) { card.style.opacity = '1'; card.style.pointerEvents = 'auto'; }
+          }
+        });
+      });
+
+      if (!window.__hoverCardDocClickAttached) {
+        window.__hoverCardDocClickAttached = true;
+        document.addEventListener('click', function(e) {
+          if (!e.target.closest || !e.target.closest('.hover-card-anchor')) {
+            document.querySelectorAll('.hover-card-anchor').forEach(function(a) {
+              a.classList.remove('is-active');
+              var c = a.querySelector('.hover-card');
+              if (c) { c.style.opacity = ''; c.style.pointerEvents = ''; }
+            });
+          }
+        });
+        window.addEventListener('resize', function() {
+          document.querySelectorAll('.hover-card-anchor').forEach(positionCard);
+        });
+      }
+    }
+    initHoverCards();
 
     // 立即执行一次大纲高亮计算，确保打开页面即处于激活状态
     setTimeout(updateScrollSpy, 50);
@@ -363,49 +485,18 @@
   // -------------------------------------------------------------
   // 全局移动端侧边抽屉组件（单点维护，全站 0 构建复用）
   // -------------------------------------------------------------
-  function renderGlobalMobileNav() {
+  function renderGlobalMobileNav(articleTocHtml) {
     var $mobileNav = $('#mobile-nav');
     if (!$mobileNav.length) return;
 
-    var scrollBodyHtml = '';
-
-    // 1. 标签树模块 (Cloud 大纲同构层级结构)
-    scrollBodyHtml += '<div class="mobile-nav-categories">';
-    scrollBodyHtml += '  <h3 class="widget-title">标签树</h3>';
-    scrollBodyHtml += '  <div class="tag-tree-container">';
-    scrollBodyHtml += '    <ul class="category-list tag-tree">';
-    scrollBodyHtml += '      <li class="category-list-item tag-tree-open">';
-    scrollBodyHtml += '        <div class="category-item-row tag-tree-toggle" role="button">';
-    scrollBodyHtml += '          <span class="tag-tree-arrow">▾</span>';
-    scrollBodyHtml += '          <span class="category-list-name">个人</span>';
-    scrollBodyHtml += '          <span class="category-list-count">1</span>';
-    scrollBodyHtml += '        </div>';
-    scrollBodyHtml += '        <ul class="category-list-child">';
-    scrollBodyHtml += '          <li class="category-list-item">';
-    scrollBodyHtml += '            <a class="category-leaf-link" href="/tags/杂谈.html">';
-    scrollBodyHtml += '              <span class="tag-tree-dot"></span>';
-    scrollBodyHtml += '              <span class="category-list-name">杂谈</span>';
-    scrollBodyHtml += '              <span class="category-list-count">1</span>';
-    scrollBodyHtml += '            </a>';
-    scrollBodyHtml += '          </li>';
-    scrollBodyHtml += '        </ul>';
-    scrollBodyHtml += '      </li>';
-    scrollBodyHtml += '    </ul>';
-    scrollBodyHtml += '  </div>';
-    scrollBodyHtml += '</div>';
-
-    // 3. 标签词云模块（中间分界，独立下半区 38.2vh 面板）
-    var tagCloudHtml = '<div class="mobile-nav-tagcloud">';
-    tagCloudHtml += '  <h3 class="widget-title">标签词云</h3>';
-    tagCloudHtml += '  <div class="mobile-nav-tagcloud-inner">';
-    tagCloudHtml += '    <a href="/tags/杂谈.html">杂谈</a>';
-    tagCloudHtml += '  </div>';
-    tagCloudHtml += '</div>';
+    if (articleTocHtml === undefined) {
+      articleTocHtml = currentArticleTocHtml;
+    }
 
     var globeSvg = '<svg class="lang-icon-globe" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>';
     var sunMoonSvg = '<svg class="theme-icon-sun" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg><svg class="theme-icon-moon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
 
-    // 4. 移动端固定底部操作栏（PC 端 CSS 已设置为 display: none !important，绝不与顶栏重复）
+    // 移动端固定底部操作栏（PC 端 CSS 已设置为 display: none !important，绝不与顶栏重复）
     var toolbarHtml = '<div class="mobile-nav-toolbar">' +
       '<div class="mobile-nav-toolbar-left">' +
       '  <a id="mobile-nav-github-link" class="nav-icon" href="https://github.com/HeptaZero" target="_blank" rel="noopener" title="GitHub"></a>' +
@@ -417,7 +508,49 @@
       '</div>' +
       '</div>';
 
-    $mobileNav.html('<div class="mobile-nav-scroll-body">' + scrollBodyHtml + '</div>' + tagCloudHtml + toolbarHtml);
+    if (articleTocHtml) {
+      // 具体文章页：仅展示大纲与底部操作栏，彻底隐藏标签树与标签词云（不显示冗余的“目录”两字）
+      var tocBodyHtml = '<div class="mobile-nav-scroll-body">' +
+        '<div class="mobile-nav-toc">' +
+        '  <div class="mobile-toc-container">' + articleTocHtml + '</div>' +
+        '</div>' +
+        '</div>';
+      $mobileNav.html(tocBodyHtml + toolbarHtml);
+    } else {
+      // 非文章页：展示默认标签树、标签词云与底部操作栏
+      var scrollBodyHtml = '<div class="mobile-nav-categories">' +
+        '  <h3 class="widget-title">标签树</h3>' +
+        '  <div class="tag-tree-container">' +
+        '    <ul class="category-list tag-tree">' +
+        '      <li class="category-list-item tag-tree-open">' +
+        '        <div class="category-item-row tag-tree-toggle" role="button">' +
+        '          <span class="tag-tree-arrow">▾</span>' +
+        '          <span class="category-list-name">个人</span>' +
+        '          <span class="category-list-count">1</span>' +
+        '        </div>' +
+        '        <ul class="category-list-child">' +
+        '          <li class="category-list-item">' +
+        '            <a class="category-leaf-link" href="/tags/杂谈.html">' +
+        '              <span class="tag-tree-dot"></span>' +
+        '              <span class="category-list-name">杂谈</span>' +
+        '              <span class="category-list-count">1</span>' +
+        '            </a>' +
+        '          </li>' +
+        '        </ul>' +
+        '      </li>' +
+        '    </ul>' +
+        '  </div>' +
+        '</div>';
+
+      var tagCloudHtml = '<div class="mobile-nav-tagcloud">' +
+        '  <h3 class="widget-title">标签词云</h3>' +
+        '  <div class="mobile-nav-tagcloud-inner">' +
+        '    <a href="/tags/杂谈.html">杂谈</a>' +
+        '  </div>' +
+        '</div>';
+
+      $mobileNav.html('<div class="mobile-nav-scroll-body">' + scrollBodyHtml + '</div>' + tagCloudHtml + toolbarHtml);
+    }
   }
 
   // -------------------------------------------------------------
@@ -609,14 +742,15 @@
     lightbox.classList.add('active');
   });
 
-  // TOC scroll spy（结合人体自然阅读视线基准线与触底锁定）
+  // TOC scroll spy（结合人体自然阅读视线基准线与触底锁定，全端大纲与抽屉双向同步）
   function updateScrollSpy(){
     var scrollTop = $(window).scrollTop();
-    var tocLinks = $('.toc-link');
-    if (!tocLinks.length) return;
+    var $desktopLinks = $('#floating-toc .toc-link');
+    var $links = $desktopLinks.length ? $desktopLinks : $('.toc-link');
+    if (!$links.length) return;
     var headers = [];
 
-    tocLinks.each(function(){
+    $links.each(function(){
       var href = $(this).attr('href');
       if (href && href.charAt(0) === '#') {
         var rawId = href.substring(1);
@@ -625,8 +759,7 @@
           var el = document.getElementById(decoded);
           if (el) {
             headers.push({
-              link: $(this),
-              header: $(el),
+              href: href,
               top: $(el).offset().top
             });
           }
@@ -636,20 +769,20 @@
 
     if (!headers.length) return;
 
-    var activeLink = null;
+    var activeHref = null;
     var winHeight = $(window).height();
     var docHeight = $(document).height();
     var isBottom = (scrollTop + winHeight >= docHeight - 80);
 
     // 触底边缘检测：翻滚到文章末尾时直接锁定激活最后一节（解决短小尾章无法到达视线线问题）
     if (isBottom) {
-      activeLink = headers[headers.length - 1].link;
+      activeHref = headers[headers.length - 1].href;
     } else {
       // 自然阅读视线基准线（屏幕高度的 38%，居中偏上，最符合人类浏览网页时的注视落点）
       var triggerLine = scrollTop + winHeight * 0.38;
       for (var i = 0; i < headers.length; i++) {
         if (triggerLine >= headers[i].top) {
-          activeLink = headers[i].link;
+          activeHref = headers[i].href;
         } else {
           break;
         }
@@ -657,23 +790,26 @@
     }
 
     // 初始加载页面且未滑到任何标题时，默认激活首个章节展开
-    if (!activeLink && headers.length) {
-      activeLink = headers[0].link;
+    if (!activeHref && headers.length) {
+      activeHref = headers[0].href;
     }
 
     $('.toc-link').removeClass('active');
     $('.toc-item').removeClass('active-current active-parent');
 
-    if (activeLink) {
-      activeLink.addClass('active');
-      var $activeItem = activeLink.closest('.toc-item');
-      $activeItem.addClass('active-current');
+    if (activeHref) {
+      var $matchingLinks = $('.toc-link[href="' + activeHref + '"]');
+      $matchingLinks.addClass('active');
+      $matchingLinks.each(function() {
+        var $activeItem = $(this).closest('.toc-item');
+        $activeItem.addClass('active-current');
 
-      // 向上溯源：激活所在的大节（展开文字与子集）
-      var $parentH2 = activeLink.closest('.toc-level-2');
-      if ($parentH2.length) {
-        $parentH2.addClass('active-parent');
-      }
+        // 向上溯源：激活所在的大节（展开文字与子集）
+        var $parentH2 = $(this).closest('.toc-level-2');
+        if ($parentH2.length) {
+          $parentH2.addClass('active-parent');
+        }
+      });
     }
   }
 
@@ -776,6 +912,7 @@
           if (isPush !== false) {
             window.history.pushState({ pjax: true, url: url }, document.title, url);
           }
+          lastPjaxPath = window.location.pathname + window.location.search;
           if (url.indexOf('#') !== -1) {
             var hash = url.split('#')[1];
             var targetEl = document.getElementById(decodeURIComponent(hash));
@@ -821,9 +958,14 @@
       pjaxLoad(a.href, true);
     });
 
-    // 监听后退/前进
+    // 监听后退/前进（仅当页面真实 URL 路径改变时执行 PJAX，同页面内部 hash/脚注锚点跳转严禁重复拉取或刷新）
+    var lastPjaxPath = window.location.pathname + window.location.search;
     window.addEventListener('popstate', function() {
-      pjaxLoad(window.location.href, false);
+      var currentPath = window.location.pathname + window.location.search;
+      if (currentPath !== lastPjaxPath) {
+        lastPjaxPath = currentPath;
+        pjaxLoad(window.location.href, false);
+      }
     });
   }
 

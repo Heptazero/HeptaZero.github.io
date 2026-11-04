@@ -71,6 +71,16 @@ body:after {
   border-bottom: 1px solid #ddd;
 }
 .article-entry h1,
+.article-entry h2,
+.article-entry h3,
+.article-entry h4,
+.article-entry h5,
+.article-entry h6 {
+  text-align: left !important;
+  text-justify: auto !important;
+  letter-spacing: normal !important;
+}
+.article-entry h1,
 .widget h1 {
   font-size: 2em;
 }
@@ -1090,14 +1100,31 @@ html.dark-mode .index-mode .article-inner {
 .article-meta:after {
   clear: both;
 }
+.article-meta {
+  display: -webkit-box;
+  display: -moz-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  flex-wrap: wrap;
+  line-height: 1.4;
+  font-size: 13.5px;
+}
 .index-mode .article-meta {
-  margin-bottom: 1px !important;
+  margin-bottom: 2px !important;
 }
 .article-date {
-  float: left;
+  display: inline-flex;
+  align-items: center;
+  float: none;
   color: #64748b;
   text-decoration: none;
   cursor: pointer;
+  line-height: 1.4;
+  font-size: 13.5px;
+  margin: 0 !important;
   -webkit-transition: color 0.2s ease;
   transition: color 0.2s ease;
 }
@@ -1110,19 +1137,30 @@ html.dark-mode .index-mode .article-inner {
   color: #0085a1 !important;
 }
 .article-category {
-  float: left;
-  line-height: 1em;
+  display: inline-flex;
+  align-items: center;
+  float: none;
+  line-height: 1.4;
+  font-size: 13.5px;
   color: #94a3b8;
   text-shadow: none !important;
-  margin-left: 15px;
+  margin: 0 !important;
 }
 .article-category:before {
   content: "\2022";
-  font-family: serif;
+  display: inline-block;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 11px;
+  line-height: 1;
   color: #94a3b8;
+  margin: 0 8px;
+  vertical-align: middle;
 }
 .article-category-link {
-  margin: 0 12px 0px;
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  line-height: 1.4;
   color: #94a3b8;
   text-decoration: none;
   text-shadow: none !important;
@@ -1169,10 +1207,57 @@ a.article-title {
 a.article-title:hover {
   color: #0085a1 !important;
 }
+/* 全局通用自动连字符排版规范 (Universal Hyphenation Typography) */
+html,
+body,
+.article-entry,
+.article-entry p,
+.article-entry li,
+.article-entry blockquote,
+.sidenote,
+.footnote-item,
+.index-entry {
+  -webkit-hyphens: auto;
+  -ms-hyphens: auto;
+  hyphens: auto;
+  hyphenate-limit-chars: 6 3 3;
+  -webkit-hyphenate-limit-before: 3;
+  -webkit-hyphenate-limit-after: 3;
+  overflow-wrap: break-word;
+}
+
+/* 严格保护：代码块、数学公式、标记、日期与特殊锚点绝不添加连字符 */
+pre,
+code,
+kbd,
+samp,
+.katex,
+.katex-display,
+.katex *,
+.sidenote-anchor,
+.footnote-backref,
+.sidenote-ref,
+.article-tag-list-link,
+.archive-article-date,
+.article-date,
+.tag-name,
+.highlight,
+.highlight * {
+  -webkit-hyphens: none !important;
+  -ms-hyphens: none !important;
+  hyphens: none !important;
+}
+
 .article-entry {
   text-align: justify;
   text-justify: inter-ideograph;
-  word-break: break-word;
+  -webkit-hyphens: auto;
+  -ms-hyphens: auto;
+  hyphens: auto;
+  hyphenate-limit-chars: 6 3 3;
+  -webkit-hyphenate-limit-before: 3;
+  -webkit-hyphenate-limit-after: 3;
+  word-break: normal;
   overflow-wrap: break-word;
   color: #222;
 }
@@ -1487,7 +1572,7 @@ body.dark-mode .article-entry.index-entry.is-overflow:after {
   margin: 1.6em 0;
   padding: 0px 2em;
   padding: 0.25em 2em 0.25em calc(2em - 5px);
-  border-left: 5px solid #ddd;
+  border-left: 4px solid #0085a1;
   background: #f7f7f7;
 }
 .article-entry blockquote strong {
@@ -3158,20 +3243,24 @@ html {
 .hover-card-anchor {
   position: relative;
   cursor: pointer;
-  border-bottom: 1px dashed #666;
+  border-bottom: 1px dashed #0085a1;
   text-decoration: none;
   color: inherit;
   display: inline;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+.hover-card-anchor:hover,
+.hover-card-anchor.is-active {
+  color: #0085a1;
 }
 .hover-card-anchor .hover-card {
-  position: absolute;
-  bottom: 130%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 260px;
+  position: fixed;
+  box-sizing: border-box !important;
+  width: 270px;
+  max-width: calc(100vw - 32px);
   background: #fff;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
   border-radius: 8px;
   padding: 12px 14px;
   font-size: 13px;
@@ -3179,13 +3268,33 @@ html {
   color: #333;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 100;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 10000;
+  text-align: left;
 }
-.hover-card-anchor:hover .hover-card {
+.hover-card-anchor .hover-card strong {
+  color: #0085a1;
+}
+.hover-card-anchor:hover .hover-card,
+.hover-card-anchor.is-active .hover-card {
   opacity: 1;
   pointer-events: auto;
-  transform: translateX(-50%) translateY(-4px);
+}
+html.dark-mode .hover-card-anchor {
+  border-bottom-color: #ff2d75;
+}
+html.dark-mode .hover-card-anchor:hover,
+html.dark-mode .hover-card-anchor.is-active {
+  color: #ff2d75;
+}
+html.dark-mode .hover-card-anchor .hover-card {
+  background: #18191c;
+  border-color: #2e323b;
+  color: #cbd5e1;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.45);
+}
+html.dark-mode .hover-card-anchor .hover-card strong {
+  color: #ff2d75;
 }
 
 /* 多图并排画廊 (Gallery Grid) */
@@ -3246,7 +3355,7 @@ html {
   height: 9px;
   border-radius: 50%;
   background: #fff;
-  border: 2px solid #000;
+  border: 2px solid #0085a1;
 }
 .dynamic-date {
   font-size: 14px;
@@ -4246,4 +4355,235 @@ blockquote,
               color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
               border-color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* =============================================================
+   移动端响应式极致优化 (Mobile Fluid Responsive Layout Optimization)
+   仅在移动端 (max-width: 810px) 生效，严禁影响 PC 端桌面排版
+   ============================================================= */
+@media screen and (max-width: 810px) {
+  html,
+  body {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+  }
+
+  /* 消除古老 Hexo 阶梯 em 宽度，全站正文区完全自适应居中且左右对称 */
+  #content,
+  .outer,
+  #main,
+  section#main,
+  section#main.has-toc {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    float: none !important;
+  }
+
+  .article,
+  .article-inner {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* 文章顶栏大标题移动端自适应，彻底解决字号过大顶出屏幕及抵住左边界问题 */
+  #header-title {
+    margin: 95px auto 26px !important;
+    padding: 0 20px !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    text-align: center !important;
+    overflow: hidden !important;
+  }
+
+  #header-title.header-archive-mode {
+    margin-top: 60px !important;
+    margin-bottom: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  #logo {
+    font-size: clamp(22px, 5.5vw, 28px) !important;
+    line-height: 1.35 !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    display: inline-block !important;
+    max-width: 100% !important;
+  }
+
+  /* 日期与分类标签在移动端为严格同高居中弹性布局，两侧对齐 */
+  .article-meta {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 0 !important;
+    line-height: 1.4 !important;
+    margin-bottom: 16px !important;
+  }
+
+  .index-mode .article-meta {
+    margin-bottom: 2px !important;
+  }
+
+  .article-date,
+  .article-category {
+    float: none !important;
+    margin-left: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    line-height: 1.4 !important;
+  }
+
+  /* 移动端正文自然左对齐与正常紧凑字宽，彻底消除中英混排时字间距被异常拉伸，同时保留长英文音节连字符断词 */
+  .article-entry,
+  .not-home .article-entry,
+  .article-entry p,
+  .article-entry li,
+  .article-entry blockquote,
+  .article-entry h1,
+  .article-entry h2,
+  .article-entry h3,
+  .article-entry h4,
+  .article-entry h5,
+  .article-entry h6 {
+    text-align: left !important;
+    text-justify: auto !important;
+    -webkit-hyphens: auto !important;
+    -ms-hyphens: auto !important;
+    hyphens: auto !important;
+    hyphenate-limit-chars: 6 3 3;
+    -webkit-hyphenate-limit-before: 3;
+    -webkit-hyphenate-limit-after: 3;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    letter-spacing: normal !important;
+  }
+
+  /* 移动端末尾注解双向平滑跳转与极简矢量返回图标 */
+  .footnote-item {
+    scroll-margin-top: 80px;
+    transition: background-color 0.3s ease;
+  }
+
+  .sidenote-ref {
+    scroll-margin-top: 80px;
+    transition: background-color 0.3s ease;
+  }
+
+  .footnote-backref {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    vertical-align: middle;
+    color: #0085a1;
+    text-decoration: none;
+    transition: color 0.2s ease, transform 0.2s ease;
+  }
+
+  .footnote-backref:hover {
+    color: #007088;
+    transform: translateX(-2px);
+  }
+
+  html.dark-mode .footnote-backref {
+    color: #ff2d75 !important;
+  }
+
+  html.dark-mode .footnote-backref:hover {
+    color: #e02667 !important;
+  }
+
+  .footnote-highlight {
+    background-color: rgba(0, 133, 161, 0.15) !important;
+    border-radius: 3px;
+    padding: 2px 4px;
+    transition: background-color 0.8s ease-out;
+  }
+
+  html.dark-mode .footnote-highlight {
+    background-color: rgba(255, 45, 117, 0.2) !important;
+  }
+
+  /* 底栏宽度自适应对齐 */
+  #footer .inner,
+  .inner {
+    float: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    text-align: center !important;
+  }
+
+  /* 归档页移动端自适应单行排版：标题自适应缩放截断，日期绝不折行压榨 */
+  .archives-wrap {
+    margin: 30px 0 !important;
+  }
+
+  .archive-article-inner {
+    padding: 10px 0 !important;
+  }
+
+  .archive-article-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  .archive-article-header h1 {
+    margin: 0 !important;
+    min-width: 0 !important;
+    flex: 0 1 auto !important;
+    overflow: hidden !important;
+  }
+
+  .archive-article-title {
+    display: block !important;
+    font-size: 14.5px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .archive-article-line {
+    flex: 1 1 auto !important;
+    min-width: 12px !important;
+    margin: 0 8px !important;
+    border-bottom: 1px dashed #ddd;
+  }
+
+  html.dark-mode .archive-article-line {
+    border-bottom-color: #2e323b !important;
+  }
+
+  .archive-article-date {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    font-size: 13px !important;
+    margin-left: auto !important;
+  }
+
+  /* 移动端侧边抽屉大纲优化：纯净大纲展示，无冗余标题字眼 */
+  .mobile-nav-toc {
+    padding: 14px 0 20px 0 !important;
+  }
+
+  .mobile-nav-toc .mobile-toc-container {
+    padding: 0 20px !important;
+  }
 }

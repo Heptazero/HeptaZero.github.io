@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Ask / 提问箱 | Heptazero</title>
+  <link rel="stylesheet" href="/css/fonts/noto/noto-serif-sc.css">
+  <link rel="stylesheet" href="/css/fonts/ChineseMono-normal-normal.min.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/css/style.css?v=2.5">
+  <link rel="stylesheet" href="/css/katex/katex.min.css">
+  <script src="/js/katex/katex.min.js"></script>
+  <script src="/js/katex/auto-render.min.js"></script>
+  <script src="/js/katex/copy-tex.min.js"></script>
+  <!-- Umami 访客统计分析 -->
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="2079fcd8-6ac2-4f0f-aa45-9e038f533b80"></script>
+</head>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <div id="nav-outer">
+        <nav id="main-nav" class="outer">
+          <a id="main-nav-toggle" class="nav-icon" title="Menu"></a>
+          <div class="main-nav-links">
+            <a class="main-nav-link" href="/index.html">Home</a>
+            <a class="main-nav-link" href="/archives.html">Archives</a>
+            <a class="main-nav-link" href="/log.html">Log</a>
+            <a class="main-nav-link current" href="/ask.html">Ask</a>
+            <a class="main-nav-link" href="/about.html">About</a>
+          </div>
+          <div id="sub-nav">
+            <a id="nav-github-link" class="nav-icon" href="https://github.com/HeptaZero" target="_blank" rel="noopener" title="GitHub"></a>
+            <a id="nav-mail-link" class="nav-icon" href="mailto:1004752777@qq.com" title="Email"></a>
+          </div>
+        </nav>
+      </div>
+      <div id="header-title">
+        <h1 id="logo-wrap">
+          <a href="/index.html" id="logo">Heptazero</a>
+        </h1>
+      </div>
+      <div id="content" class="outer not-home">
+        <section id="main" class="has-toc">
+          <article id="ask-page" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+            <div class="article-inner" style="border-bottom: none; background: transparent;">
+              <header class="article-header">
+                <h1 class="p-name article-title" itemprop="headline name">Ask / 提问箱</h1>
+              </header>
+              <div class="e-content article-entry" itemprop="articleBody">
+                <p>这里是一个完全匿名的提问箱。你可以提出任何关于数学、深度学习、算法哲学、或生活杂谈的疑问。提问提交后不会直接公开，博主作答后会在此沉淀展示。</p>
+
+                <!-- 匿名提问卡片 -->
+                <div class="ask-box-wrap">
+                  <textarea id="ask-input" placeholder="写下你的疑问或想说的话……（支持中英文与 LaTeX 公式，完全匿名）" rows="4" maxlength="1000"></textarea>
+                  <div class="ask-box-footer">
+                    <span id="ask-counter" class="ask-char-count">0 / 1000</span>
+                    <button id="ask-submit-btn" class="ask-submit-btn">匿名投递</button>
+                  </div>
+                  <div id="ask-banner" class="ask-status-banner"></div>
+                </div>
+
+                <!-- 精选问答流 -->
+                <h2 id="qa-title" style="margin-top: 2em; border-bottom: 1.5px solid #000; padding-bottom: 8px;">精选问答</h2>
+                <div id="qa-stream" class="qa-stream">
+                  <div class="qa-empty-state" id="qa-loading">正在拉取最新问答流……</div>
+                </div>
+
+                <!-- 博主管理暗门 -->
+                <div class="qa-admin-trigger-wrap">
+                  <a id="qa-admin-btn" class="qa-admin-key" href="javascript:void(0);" title="博主管理"><i class="fa fa-key"></i> 管理</a>
+                </div>
+
+                <!-- 管理后台面板（默认隐藏，密码验证通过后展开） -->
+                <div id="qa-admin-panel" class="qa-admin-panel">
+                  <h3 style="margin-top: 0; font-size: 16px;">待审阅回复列表</h3>
+                  <div id="qa-admin-pending-list">暂无待回复问题</div>
+                </div>
+
+              </div>
+            </div>
+          </article>
+        </section>
+      </div>
+      <aside id="floating-toc" style="display: none;"></aside>
+      <footer id="footer">
+        <div class="outer">
+          <div id="footer-info" class="inner">
+            &copy; 2026 Heptazero<br>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <nav id="mobile-nav">
+      <div class="mobile-nav-categories">
+        <h3 class="widget-title">导航</h3>
+        <ul>
+          <li><a href="/index.html">Home</a></li>
+          <li><a href="/archives.html">Archives</a></li>
+          <li><a href="/log.html">Log</a></li>
+          <li><a href="/ask.html">Ask</a></li>
+          <li><a href="/about.html">About</a></li>
+        </ul>
+      </div>
+    </nav>
+    <div id="mobile-nav-dim"></div>
+  </div>
+
+  <script src="/js/jquery-1.4.3.min.js"></script>
+  <script src="/js/script.js?v=2.5"></script>
+  <script>
+    // -------------------------------------------------------------
+    // 提问箱客户端核心逻辑 (Cloudflare Worker API 集成)
+    // -------------------------------------------------------------
+    (function() {
+      // API 基地址配置（已无缝对接你的 Cloudflare Worker）
+      var API_BASE = localStorage.getItem('QA_API_BASE') || 'https://blog-qa-worker.1004752777.workers.dev';
+
+      var askInput = document.getElementById('ask-input');
+      var askCounter = document.getElementById('ask-counter');
+      var askBtn = document.getElementById('ask-submit-btn');
+      var askBanner = document.getElementById('ask-banner');
+      var qaStream = document.getElementById('qa-stream');
+      var qaAdminBtn = document.getElementById('qa-admin-btn');
+      var qaAdminPanel = document.getElementById('qa-admin-panel');
+      var qaAdminPending = document.getElementById('qa-admin-pending-list');
+
+      // 1. 输入字数计数监听
+      if (askInput) {
+        askInput.addEventListener('input', function() {
+          var len = askInput.value.length;
+          askCounter.textContent = len + ' / 1000';
+        });
+      }
+
+      // 2. 匿名提交问题
+      if (askBtn) {
+        askBtn.addEventListener('click', function() {
+          var content = (askInput.value || '').trim();
+          if (!content) {
+            showBanner('请输入您想提出的问题或留言', 'error');
+            return;
+          }
+
+          askBtn.disabled = true;
+          askBtn.textContent = '投递中...';
+
+          fetch(API_BASE + '/api/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: content })
+          })
+          .then(function(res) {
+            return res.json().catch(function() { return { success: false }; });
+          })
+          .then(function(data) {
+            if (data.success) {
+              askInput.value = '';
+              askCounter.textContent = '0 / 1000';
+              showBanner(data.message || '提问已匿名投递成功！博主作答后将沉淀在此。', 'success');
+            } else {
+              showBanner(data.error || '投递未成功，服务可能正在部署或初始化中。', 'error');
+            }
+          })
+          .catch(function(err) {
+            showBanner('网络连接失败或云服务尚未上线，请稍后再试。', 'error');
+          })
+          .finally(function() {
+            askBtn.disabled = false;
+            askBtn.textContent = '匿名投递';
+          });
+        });
+      }
+
+      function showBanner(msg, type) {
+        askBanner.className = 'ask-status-banner ' + type;
+        askBanner.textContent = msg;
+        askBanner.style.display = 'block';
+        setTimeout(function() {
+          askBanner.style.display = 'none';
+        }, 6000);
+      }
+
+      // 3. 拉取已公开的问答流并渲染
+      function loadQuestions() {
+        fetch(API_BASE + '/api/questions')
+          .then(function(res) { return res.json(); })
+          .then(function(data) {
+            if (data.success && data.questions && data.questions.length > 0) {
+              renderQuestions(data.questions);
+            } else {
+              qaStream.innerHTML = '<div class="qa-empty-state">暂无公开问答，欢迎在上方提出第一个问题。</div>';
+            }
+          })
+          .catch(function() {
+            // 优雅降级占位展示（若 Worker 尚未部署完成）
+            qaStream.innerHTML = '<div class="qa-empty-state">提问服务初始化中。一旦后台 Worker 配置上线，此处将自动同步问答。</div>';
+          });
+      }
+
+      function renderQuestions(list) {
+        var html = '';
+        list.forEach(function(item) {
+          var dateStr = (item.answered_at || item.created_at || '').substring(0, 10);
+          html += '<div class="qa-card" id="qa-' + item.id + '">';
+          html += '  <div class="qa-question-section">';
+          html += '    <span class="qa-badge-q">Q</span>';
+          html += '    <div class="qa-question-text">';
+          html += '      ' + escapeHtml(item.content);
+          html += '      <time class="qa-meta-time">' + dateStr + '</time>';
+          html += '    </div>';
+          html += '  </div>';
+          html += '  <div class="qa-answer-section">';
+          html += '    <span class="qa-badge-a">A</span>';
+          html += '    <div class="qa-answer-text">' + formatAnswer(item.answer) + '</div>';
+          html += '  </div>';
+          html += '</div>';
+        });
+        qaStream.innerHTML = html;
+
+        // KaTeX 重新渲染数学公式
+        if (window.renderMathInElement) {
+          try {
+            renderMathInElement(qaStream, {
+              delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+              ],
+              throwOnError: false
+            });
+          } catch(e) {}
+        }
+      }
+
+      function escapeHtml(text) {
+        var map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return (text || '').replace(/[&<>"']/g, function(m) { return map[m]; });
+      }
+
+      function formatAnswer(text) {
+        if (!text) return '';
+        var safe = escapeHtml(text);
+        // 支持段落折行
+        return '<p>' + safe.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
+      }
+
+      // 4. 博主管理暗门鉴权
+      var adminToken = sessionStorage.getItem('QA_ADMIN_TOKEN');
+
+      if (qaAdminBtn) {
+        qaAdminBtn.addEventListener('click', function() {
+          if (!adminToken) {
+            var input = prompt('请输入提问箱博主管理密码：');
+            if (!input) return;
+            adminToken = input.trim();
+            sessionStorage.setItem('QA_ADMIN_TOKEN', adminToken);
+          }
+          toggleAdminPanel();
+        });
+      }
+
+      function toggleAdminPanel() {
+        if (!qaAdminPanel) return;
+        qaAdminPanel.classList.toggle('active');
+        if (qaAdminPanel.classList.contains('active')) {
+          loadPendingQuestions();
+        }
+      }
+
+      function loadPendingQuestions() {
+        qaAdminPending.innerHTML = '正在加载待回复提问...';
+        fetch(API_BASE + '/api/admin/pending', {
+          headers: { 'Authorization': 'Bearer ' + adminToken }
+        })
+        .then(function(res) {
+          if (res.status === 401) {
+            sessionStorage.removeItem('QA_ADMIN_TOKEN');
+            adminToken = null;
+            throw new Error('密码错误或未授权');
+          }
+          return res.json();
+        })
+        .then(function(data) {
+          if (!data.success || !data.pending || data.pending.length === 0) {
+            qaAdminPending.innerHTML = '<div style="color:#64748b; padding:10px 0;">当前没有待回复的新提问。</div>';
+            return;
+          }
+          renderPending(data.pending);
+        })
+        .catch(function(err) {
+          qaAdminPending.innerHTML = '<div style="color:#ef4444;">' + (err.message || '加载失败') + '</div>';
+        });
+      }
+
+      function renderPending(list) {
+        var html = '';
+        list.forEach(function(item) {
+          html += '<div class="qa-admin-pending-item" id="pending-' + item.id + '">';
+          html += '  <div style="font-weight:600; color:#1e293b; margin-bottom:6px;">' + escapeHtml(item.content) + '</div>';
+          html += '  <div style="font-size:12px; color:#94a3b8; font-family:ChineseMono,monospace; margin-bottom:8px;">' + (item.created_at || '') + '</div>';
+          html += '  <textarea class="qa-admin-reply-box" id="reply-input-' + item.id + '" placeholder="在此输入公开发布的回答……（支持 LaTeX）" rows="3"></textarea>';
+          html += '  <div class="qa-admin-actions">';
+          html += '    <button class="qa-btn-delete" onclick="window.qaDeleteQuestion(' + item.id + ')">忽略删除</button>';
+          html += '    <button class="qa-btn-publish" onclick="window.qaPublishAnswer(' + item.id + ')">公开发布</button>';
+          html += '  </div>';
+          html += '</div>';
+        });
+        qaAdminPending.innerHTML = html;
+      }
+
+      window.qaPublishAnswer = function(id) {
+        var replyInput = document.getElementById('reply-input-' + id);
+        var answer = (replyInput ? replyInput.value : '').trim();
+        if (!answer) {
+          alert('请先输入回答内容再发布！');
+          return;
+        }
+
+        fetch(API_BASE + '/api/admin/reply', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + adminToken
+          },
+          body: JSON.stringify({ id: id, answer: answer })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data.success) {
+            alert('发布成功！已沉淀至公开问答墙。');
+            loadPendingQuestions();
+            loadQuestions();
+          } else {
+            alert('发布失败：' + (data.error || '未知错误'));
+          }
+        });
+      };
+
+      window.qaDeleteQuestion = function(id) {
+        if (!confirm('确定要删除这条提问吗？')) return;
+        fetch(API_BASE + '/api/admin/delete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + adminToken
+          },
+          body: JSON.stringify({ id: id })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data.success) {
+            loadPendingQuestions();
+          } else {
+            alert('删除失败：' + (data.error || '未知错误'));
+          }
+        });
+      };
+
+      // 初始化加载问答流
+      loadQuestions();
+    })();
+  </script>
+</body>
+</html>

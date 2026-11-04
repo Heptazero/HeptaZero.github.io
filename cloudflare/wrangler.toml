@@ -1,0 +1,15 @@
+name = "blog-qa-worker"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# D1 数据库绑定（在 Cloudflare 后台创建数据库后填入 database_id）
+[[d1_databases]]
+binding = "DB"
+database_name = "blog-qa"
+database_id = "YOUR_D1_DATABASE_ID"
+
+[vars]
+ADMIN_PASSWORD = "CHANGE_THIS_TO_YOUR_SECURE_PASSWORD"
+# 可选推送配置（按需启用）：
+# BARK_KEY = "your-bark-key"
+# SERVERCHAN_KEY = "your-serverchan-sendkey"

@@ -68,7 +68,6 @@ body:after {
 }
 .article-inner {
   background: #fff;
-  border-bottom: 1px solid #ddd;
 }
 .article-entry h1,
 .article-entry h2,
@@ -1763,9 +1762,9 @@ body.dark-mode .article-entry.index-entry.is-overflow:after {
 }
 #comments {
   background: transparent;
-  padding: 24px 0 10px 0;
+  padding: 30px 0 10px 0;
   margin: 30px 0 50px 0;
-  border-top: 1px solid #e5e7eb;
+  border-top: none;
 }
 #comments .comments-title {
   display: none !important;
@@ -4250,7 +4249,7 @@ html.dark-mode .qa-admin-reply-box {
 /* 评论与留言板 Dark Mode */
 html.dark-mode #comments {
   background: transparent !important;
-  border-top-color: #242730 !important;
+  border-top: none !important;
 }
 html.dark-mode #comments .comments-title {
   color: #f1f5f9 !important;

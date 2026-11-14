@@ -2978,14 +2978,20 @@ html {
   display: flex;
   align-items: center;
   padding: 2px 0;
-  font-size: 13px;
+  font-size: 14.5px;
+  font-weight: 600;
   line-height: 1.4;
-  height: 24px;
+  height: 26px;
   box-sizing: border-box;
   position: relative;
   white-space: nowrap;
   -webkit-transition: color 0.2s ease;
   transition: color 0.2s ease;
+}
+#floating-toc .toc-child .toc-link {
+  font-size: 12.5px;
+  font-weight: 400;
+  height: 23px;
 }
 
 /* 纯圆点节点 (无竖线导轨，不同层级大小不同) */
@@ -3162,11 +3168,14 @@ html {
   cursor: default;
   padding: 0 2px;
 }
+.article-entry {
+  position: relative;
+}
 .sidenote {
-  float: right;
-  clear: right;
-  margin-right: calc(-0.25 * (100vw - 100%) - 100px);
-  width: 200px;
+  position: absolute;
+  left: calc(100% + 36px);
+  top: 0;
+  width: 210px;
   font-size: 0.82em;
   line-height: 1.55;
   text-align: left;
@@ -3174,17 +3183,83 @@ html {
   color: #64748b;
   padding: 4px 0 4px 10px;
   border-left: 2px solid #e2e8f0;
-  margin-bottom: 1em;
-  position: relative;
+  margin: 0;
   background: transparent;
-}
-.article-entry blockquote .sidenote {
-  margin-right: calc(-0.25 * (100vw - 100%) - 116px);
 }
 .sidenote .sidenote-num {
   font-weight: 700;
   color: #0f172a;
   margin-right: 4px;
+}
+
+/* 文章字数与阅读时间统计 */
+.article-reading-stats {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #94a3b8;
+  letter-spacing: 0.4px;
+  font-weight: 400;
+}
+html.dark-mode .article-reading-stats {
+  color: #64748b;
+}
+
+/* 标题悬停层级标号 (0, 0.1, 0.2 ...) */
+.article-entry h1,
+.article-entry h2,
+.article-entry h3,
+.article-entry h4 {
+  position: relative;
+}
+.heading-sec-num {
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  padding-right: 10px;
+  font-size: 0.72em;
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #0085a1;
+  opacity: 0;
+  transform: translateY(-50%) translateX(4px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.article-entry h1:hover > .heading-sec-num,
+.article-entry h2:hover > .heading-sec-num,
+.article-entry h3:hover > .heading-sec-num,
+.article-entry h4:hover > .heading-sec-num {
+  opacity: 0.85;
+  transform: translateY(-50%) translateX(0);
+}
+html.dark-mode .heading-sec-num {
+  color: #ff2d75;
+}
+@media screen and (max-width: 810px) {
+  .heading-sec-num {
+    position: static;
+    display: inline-block;
+    padding-right: 6px;
+    transform: none;
+    opacity: 0;
+    max-width: 0;
+    overflow: hidden;
+    vertical-align: baseline;
+  }
+  .article-entry h1:hover > .heading-sec-num,
+  .article-entry h2:hover > .heading-sec-num,
+  .article-entry h3:hover > .heading-sec-num,
+  .article-entry h4:hover > .heading-sec-num {
+    opacity: 0.85;
+    max-width: 4em;
+    transform: none;
+  }
+}
+
+/* 章节空行呼吸留白（替代生硬分割线） */
+.prose-break {
+  height: 3.2em;
 }
 /* 文章末尾注解列表 (宽屏隐藏，移动端/窄屏展示) */
 .article-footnotes {

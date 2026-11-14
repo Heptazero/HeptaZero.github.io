@@ -84,6 +84,7 @@
         var tocHtml = '<ol class="toc">';
         var currentTopLi = false;
         var inChildOl = false;
+        var secCounters = [];
 
         $headings.each(function(idx) {
           var $h = $(this);
@@ -92,9 +93,25 @@
             id = 'heading-' + idx;
             $h.attr('id', id);
           }
-          var text = $h.text().replace(/^#+\s*/, '').trim();
+          var text = $h.clone().find('.heading-sec-num').remove().end().text().replace(/^#+\s*/, '').trim();
           var tag = this.tagName.toLowerCase();
           var level = parseInt(tag.substring(1), 10);
+
+          // 0 起始的多级标题悬浮编号（0, 0.1, 0.2, 1, 1.1...）
+          var relLevel = Math.max(0, level - minLevel);
+          if (relLevel === 0) {
+            secCounters = [secCounters.length === 0 ? 0 : secCounters[0] + 1];
+          } else {
+            while (secCounters.length <= relLevel) {
+              secCounters.push(0);
+            }
+            secCounters[relLevel] += 1;
+            secCounters.length = relLevel + 1;
+          }
+          var secLabel = secCounters.join('.');
+          if (!$h.find('.heading-sec-num').length) {
+            $h.prepend('<span class="heading-sec-num" aria-hidden="true">' + secLabel + '</span>');
+          }
 
           if (level <= minLevel) {
             if (inChildOl) {
@@ -136,6 +153,27 @@
       $floatingToc.empty().hide();
     }
     currentArticleTocHtml = articleTocHtml;
+
+    // 3.5 自动计算正文字数（不含标点符号）与预计阅读时间，挂载到标题下方
+    $('.article-reading-stats').remove();
+    if (!isHome && !isAbout && !isAsk && $entry.length && !$('.archives-wrap').length && !$('#thoughts-list').length) {
+      var $textClone = $entry.first().clone();
+      $textClone.find('.sidenote, .hover-card, .copy-button, .article-footnotes, .heading-sec-num, script, style').remove();
+      var rawText = $textClone.text() || '';
+      var cjkMatches = rawText.match(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g);
+      var enMatches = rawText.match(/[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*/g);
+      var wordCount = (cjkMatches ? cjkMatches.length : 0) + (enMatches ? enMatches.length : 0);
+      if (wordCount > 0) {
+        var readMins = Math.max(1, Math.round(wordCount / 400));
+        var $stats = $('<div class="article-reading-stats">约 ' + wordCount.toLocaleString('en-US') + ' 字 · 预计阅读 ' + readMins + ' 分钟</div>');
+        var $logoWrap = $('#header-title #logo-wrap');
+        if ($logoWrap.length) {
+          $logoWrap.after($stats);
+        } else {
+          $('#header-title').append($stats);
+        }
+      }
+    }
 
     // 4. KaTeX 数学公式自动渲染（带重试等待机制）
     function renderMathWithRetry() {
@@ -235,15 +273,20 @@
         var $footnotesWrap = $('<div class="article-footnotes"><div class="footnotes-title">注解</div><ol class="footnotes-list"></ol></div>');
         var $list = $footnotesWrap.find('.footnotes-list');
 
+        var $refs = $articleEntry.find('.sidenote-ref');
         $sidenotes.each(function(index) {
           var noteNum = index + 1;
           var $note = $(this);
+          $note.attr('data-fn-idx', noteNum);
           
           // 提取纯注解文本（去掉原本内部的 sup 编号）
           var noteHtml = $note.clone().find('.sidenote-num').remove().end().html().trim();
 
-          // 给正文中的引用点加上返回锚点与链接
+          // 给正文中的引用点加上返回锚点与链接（兼容旁批写在引用点前或后的两种写法）
           var $prevRef = $note.prev('.sidenote-ref');
+          if (!$prevRef.length) {
+            $prevRef = $refs.eq(index);
+          }
           if ($prevRef.length) {
             $prevRef.attr('id', 'fnref-' + noteNum);
             $prevRef.html('<a href="#fn-' + noteNum + '" class="sidenote-anchor">' + noteNum + '</a>');
@@ -262,6 +305,57 @@
       }
     }
     initFootnotes();
+
+    // 6.5 桌面端平行边注自动对齐（彻底消除 float 与 blockquote 嵌套导致的横向/纵向漂移）
+    function layoutSidenotes() {
+      var $articleEntry = $('.article-entry').first();
+      if (!$articleEntry.length) return;
+      var $notes = $articleEntry.find('.sidenote');
+      if (!$notes.length) return;
+
+      if (window.innerWidth <= 1100) {
+        $notes.css({ position: '', top: '', left: '' });
+        return;
+      }
+
+      $notes.each(function() {
+        if (this.parentNode !== $articleEntry[0]) {
+          $articleEntry[0].appendChild(this);
+        }
+      });
+
+      var entryRect = $articleEntry[0].getBoundingClientRect();
+      var targetLeft = Math.round(entryRect.width + 36);
+      var lastBottom = -Infinity;
+
+      $notes.each(function() {
+        var $note = $(this);
+        var idx = $note.attr('data-fn-idx');
+        var refEl = idx ? document.getElementById('fnref-' + idx) : null;
+        if (!refEl) return;
+
+        var refRect = refEl.getBoundingClientRect();
+        var idealTop = Math.round(refRect.top - entryRect.top - 2);
+        var actualTop = Math.max(idealTop, lastBottom + 14);
+
+        $note.css({
+          position: 'absolute',
+          left: targetLeft + 'px',
+          top: actualTop + 'px'
+        });
+
+        var noteHeight = this.offsetHeight || 0;
+        lastBottom = actualTop + noteHeight;
+      });
+    }
+    layoutSidenotes();
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(layoutSidenotes);
+    }
+    if (!window.__sidenoteLayoutBound) {
+      window.__sidenoteLayoutBound = true;
+      $(window).on('load resize', layoutSidenotes);
+    }
 
     // 7. 边注与末尾脚注双向平滑跳转定位与闪烁高亮（严禁触发 PJAX 整页刷新或滚回顶部）
     if (!window.__footnoteJumpHandlerAttached) {
@@ -545,9 +639,9 @@
         '        </div>' +
         '        <ul class="category-list-child">' +
         '          <li class="category-list-item">' +
-        '            <a class="category-leaf-link" href="/tags/书评.html">' +
+        '            <a class="category-leaf-link" href="/tags/虚拟作品评价.html">' +
         '              <span class="tag-tree-dot"></span>' +
-        '              <span class="category-list-name">书评</span>' +
+        '              <span class="category-list-name">虚拟作品评价</span>' +
         '              <span class="category-list-count">1</span>' +
         '            </a>' +
         '          </li>' +
@@ -567,7 +661,7 @@
       var tagCloudHtml = '<div class="mobile-nav-tagcloud">' +
         '  <h3 class="widget-title">标签词云</h3>' +
         '  <div class="mobile-nav-tagcloud-inner">' +
-        '    <a href="/tags/书评.html">书评</a>' +
+        '    <a href="/tags/虚拟作品评价.html">虚拟作品评价</a>' +
         '    <a href="/tags/杂谈.html">杂谈</a>' +
         '  </div>' +
         '</div>';

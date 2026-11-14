@@ -14,9 +14,19 @@
     { "label": "Ask", "href": "/ask.html" },
     { "label": "About", "href": "/about.html" }
   ],
-  "tag_groups": [
-    { "name": "个人", "tags": ["虚拟作品评价", "杂谈"] }
-  ],
+  "tags": {
+    "works": {
+      "name": "虚拟作品评价",
+      "group": "个人",
+      "aliases": ["虚拟作品评价", "书评"]
+    },
+    "notes": {
+      "name": "杂谈",
+      "group": "个人",
+      "aliases": ["杂谈"]
+    }
+  },
+  "tag_groups_order": ["个人"],
   "slug_map": {
     "261114屠杀器官": "genocidal-organ",
     "260124博客的设想": "blog-vision"

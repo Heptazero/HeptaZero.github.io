@@ -63,6 +63,17 @@
       codes[i].parentElement.insertBefore(copy_button, codes[i]);
     }
 
+    // 0. 站点标签 ID 动态映射（保证即使静态链接未刷新，标签显示名也与 site-data.js 同步）
+    if (window.SITE_DATA && window.SITE_DATA.tagMap) {
+      $('[data-tag-id]').each(function() {
+        var tid = $(this).attr('data-tag-id');
+        var info = window.SITE_DATA.tagMap[tid];
+        if (info) {
+          $(this).attr('href', info.href).text(info.name);
+        }
+      });
+    }
+
     // 3. 自动生成真层级大纲并挂载到 #floating-toc
     var $floatingToc = $('#floating-toc');
     var isHome = $('#content').hasClass('is-home');

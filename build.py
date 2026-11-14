@@ -350,7 +350,25 @@ def parse_md_template(md_path: Path, cfg: dict) -> dict | None:
     }
 
 
-def extract_post_metadata_from_html(post_path: Path) -> dict | None:
+def resolve_tag_id(raw: str, cfg: dict) -> str:
+    raw = raw.strip().lstrip("#")
+    tags_cfg = cfg.get("tags", {})
+    if raw in tags_cfg:
+        return raw
+    for tid, info in tags_cfg.items():
+        if raw == info.get("name") or raw in info.get("aliases", []):
+            return tid
+    return re.sub(r"[^a-zA-Z0-9\u4e00-\u9fff_-]+", "-", raw).strip("-") or "notes"
+
+
+def get_tag_info(tid: str, cfg: dict) -> dict:
+    info = cfg.get("tags", {}).get(tid)
+    if info:
+        return {"id": tid, "name": info["name"], "group": info.get("group", "其他"), "href": f"/tags/{tid}.html"}
+    return {"id": tid, "name": tid, "group": "其他", "href": f"/tags/{tid}.html"}
+
+
+def extract_post_metadata_from_html(post_path: Path, cfg: dict) -> dict | None:
     content = post_path.read_text(encoding="utf-8")
     slug = post_path.stem
 
@@ -358,13 +376,20 @@ def extract_post_metadata_from_html(post_path: Path) -> dict | None:
     if not title_m:
         title_m = re.search(r'<h1[^>]*class="p-name article-title"[^>]*>\s*(.*?)\s*</h1>', content, re.S)
     date_m = re.search(r'<time[^>]*datetime="(\d{4}-\d{2}-\d{2})"[^>]*>', content)
-    tag_m = re.search(r'<a[^>]*class="article-category-link"[^>]*>\s*(.*?)\s*</a>', content)
+    tag_link_m = re.search(r'<a[^>]*class="article-category-link"[^>]*>\s*(.*?)\s*</a>', content)
     if not (title_m and date_m):
         return None
 
     title = re.sub(r"<[^>]+>", "", title_m.group(1)).strip()
     date_str = date_m.group(1)
-    tag = tag_m.group(1).strip() if tag_m else "杂谈"
+
+    tid_m = re.search(r'<a[^>]*class="article-category-link"[^>]*data-tag-id="([^"]+)"', content)
+    if tid_m:
+        tag_id = resolve_tag_id(tid_m.group(1), cfg)
+    else:
+        raw_tag = tag_link_m.group(1).strip() if tag_link_m else "notes"
+        tag_id = resolve_tag_id(raw_tag, cfg)
+    tag_info = get_tag_info(tag_id, cfg)
 
     # Extract summary from meta description or first paragraph
     desc_m = re.search(r'<meta\s+name="description"\s+content="([^"]*)"', content)
@@ -373,7 +398,8 @@ def extract_post_metadata_from_html(post_path: Path) -> dict | None:
         "slug": slug,
         "title": title,
         "date": date_str,
-        "tag": tag,
+        "tag_id": tag_id,
+        "tag": tag_info["name"],
         "summary": summary,
         "url": f"/posts/{slug}.html",
     }
@@ -386,8 +412,10 @@ def build_post_html(cfg: dict, post: dict) -> str:
     nav = render_nav(cfg, current_href="")
     footer = render_footer(cfg)
     scripts = render_scripts(cfg)
-    tag = post["tag"]
-    tag_href = f"/tags/{tag}.html"
+    tag_id = resolve_tag_id(post["tag"], cfg)
+    tag_info = get_tag_info(tag_id, cfg)
+    tag = tag_info["name"]
+    tag_href = tag_info["href"]
 
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -409,7 +437,7 @@ def build_post_html(cfg: dict, post: dict) -> str:
                 <time class="dt-published" datetime="{post['date']}" itemprop="datePublished">{post['date']}</time>
               </a>
               <div class="article-category">
-                <a class="article-category-link" href="{tag_href}">{html.escape(tag)}</a>
+                <a class="article-category-link" data-tag-id="{tag_id}" href="{tag_href}">{html.escape(tag)}</a>
               </div>
             </div>
             <div class="article-inner">
@@ -608,33 +636,47 @@ def sync_shell_in_existing_html(html_path: Path, cfg: dict) -> None:
             count=1,
         )
 
+    # Sync all article-category-link tags to stable tag IDs & current display names
+    def repl_cat_link(m: re.Match) -> str:
+        attrs, inner = m.group(1), m.group(2).strip()
+        tid_m = re.search(r'data-tag-id="([^"]+)"', attrs)
+        tid = resolve_tag_id(tid_m.group(1) if tid_m else inner, cfg)
+        info = get_tag_info(tid, cfg)
+        return f'<a class="article-category-link" data-tag-id="{tid}" href="{info["href"]}">{html.escape(info["name"])}</a>'
+
+    text = re.sub(
+        r'<a\s+([^>]*class="article-category-link"[^>]*)>(.*?)</a>',
+        repl_cat_link,
+        text,
+        flags=re.S,
+    )
+
     html_path.write_text(text, encoding="utf-8")
 
 
 def write_site_data_js(cfg: dict, posts: list[dict]) -> None:
     tag_counts: dict[str, int] = defaultdict(int)
     for p in posts:
-        tag_counts[p["tag"]] += 1
+        tag_counts[p["tag_id"]] += 1
+
+    grouped: dict[str, list[dict]] = defaultdict(list)
+    tag_map: dict[str, dict] = {}
+    for tid, count in tag_counts.items():
+        if count <= 0:
+            continue
+        info = get_tag_info(tid, cfg)
+        entry = {"id": tid, "name": info["name"], "count": count, "href": info["href"]}
+        grouped[info["group"]].append(entry)
+        tag_map[tid] = {"id": tid, "name": info["name"], "href": info["href"]}
 
     groups_out = []
-    seen_tags: set[str] = set()
-    for g in cfg.get("tag_groups", []):
-        g_tags = []
-        for t in g["tags"]:
-            if tag_counts[t] > 0:
-                g_tags.append({"name": t, "count": tag_counts[t], "href": f"/tags/{t}.html"})
-                seen_tags.add(t)
-        if g_tags:
-            groups_out.append({"name": g["name"], "count": sum(x["count"] for x in g_tags), "tags": g_tags})
-
-    # Any extra tags not in configured groups
-    extra_tags = [
-        {"name": t, "count": c, "href": f"/tags/{t}.html"}
-        for t, c in sorted(tag_counts.items())
-        if t not in seen_tags and c > 0
-    ]
-    if extra_tags:
-        groups_out.append({"name": "其他", "count": sum(x["count"] for x in extra_tags), "tags": extra_tags})
+    seen_groups: set[str] = set()
+    for gname in cfg.get("tag_groups_order", []) + sorted(grouped.keys()):
+        if gname in seen_groups or not grouped.get(gname):
+            continue
+        seen_groups.add(gname)
+        g_tags = grouped[gname]
+        groups_out.append({"name": gname, "count": sum(x["count"] for x in g_tags), "tags": g_tags})
 
     all_tags = []
     for g in groups_out:
@@ -645,6 +687,7 @@ def write_site_data_js(cfg: dict, posts: list[dict]) -> None:
         "subtitle": cfg.get("subtitle", ""),
         "github": cfg["github"],
         "email": cfg["email"],
+        "tagMap": tag_map,
         "tagGroups": groups_out,
         "tags": all_tags,
         "posts": [
@@ -652,6 +695,7 @@ def write_site_data_js(cfg: dict, posts: list[dict]) -> None:
                 "slug": p["slug"],
                 "title": p["title"],
                 "date": p["date"],
+                "tagId": p["tag_id"],
                 "tag": p["tag"],
                 "url": f"/posts/{p['slug']}.html",
             }
@@ -700,25 +744,26 @@ def main() -> None:
     # 2. Collect all published posts from posts/*.html (sorted newest first)
     all_posts: list[dict] = []
     for post_file in posts_dir.glob("*.html"):
-        meta = extract_post_metadata_from_html(post_file)
+        meta = extract_post_metadata_from_html(post_file, cfg)
         if meta:
             all_posts.append(meta)
     all_posts.sort(key=lambda p: (p["date"], p["slug"]), reverse=True)
 
-    # 3. Regenerate tags/*.html
+    # 3. Regenerate tags/<tag_id>.html
     tags_map: dict[str, list[dict]] = defaultdict(list)
     for p in all_posts:
-        tags_map[p["tag"]].append(p)
+        tags_map[p["tag_id"]].append(p)
 
     for old_tag_file in tags_dir.glob("*.html"):
         if old_tag_file.stem not in tags_map:
             old_tag_file.unlink()
             print(f"[clean] removed unused tag page {old_tag_file.relative_to(ROOT)}")
 
-    for tag, tag_posts in tags_map.items():
-        tag_file = tags_dir / f"{tag}.html"
-        tag_file.write_text(build_tag_html(cfg, tag, tag_posts), encoding="utf-8")
-        print(f"[build] updated {tag_file.relative_to(ROOT)} ({len(tag_posts)})")
+    for tid, tag_posts in tags_map.items():
+        info = get_tag_info(tid, cfg)
+        tag_file = tags_dir / f"{tid}.html"
+        tag_file.write_text(build_tag_html(cfg, info["name"], tag_posts), encoding="utf-8")
+        print(f"[build] updated {tag_file.relative_to(ROOT)} -> {info['name']} ({len(tag_posts)})")
 
     # 4. Regenerate archives.html
     (ROOT / "archives.html").write_text(build_archives_html(cfg, all_posts), encoding="utf-8")

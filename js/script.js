@@ -541,9 +541,16 @@
         '        <div class="category-item-row tag-tree-toggle" role="button">' +
         '          <span class="tag-tree-arrow">▾</span>' +
         '          <span class="category-list-name">个人</span>' +
-        '          <span class="category-list-count">1</span>' +
+        '          <span class="category-list-count">2</span>' +
         '        </div>' +
         '        <ul class="category-list-child">' +
+        '          <li class="category-list-item">' +
+        '            <a class="category-leaf-link" href="/tags/书评.html">' +
+        '              <span class="tag-tree-dot"></span>' +
+        '              <span class="category-list-name">书评</span>' +
+        '              <span class="category-list-count">1</span>' +
+        '            </a>' +
+        '          </li>' +
         '          <li class="category-list-item">' +
         '            <a class="category-leaf-link" href="/tags/杂谈.html">' +
         '              <span class="tag-tree-dot"></span>' +
@@ -560,6 +567,7 @@
       var tagCloudHtml = '<div class="mobile-nav-tagcloud">' +
         '  <h3 class="widget-title">标签词云</h3>' +
         '  <div class="mobile-nav-tagcloud-inner">' +
+        '    <a href="/tags/书评.html">书评</a>' +
         '    <a href="/tags/杂谈.html">杂谈</a>' +
         '  </div>' +
         '</div>';

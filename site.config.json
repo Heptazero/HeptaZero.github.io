@@ -1,0 +1,24 @@
+{
+  "site_name": "Heptazero",
+  "site_url": "https://heptazero.github.io",
+  "subtitle": "",
+  "copyright_year": "2026",
+  "github": "https://github.com/HeptaZero",
+  "email": "1004752777@qq.com",
+  "umami_id": "2079fcd8-6ac2-4f0f-aa45-9e038f533b80",
+  "asset_version": "3.10",
+  "nav": [
+    { "label": "Home", "href": "/index.html" },
+    { "label": "Archives", "href": "/archives.html" },
+    { "label": "Log", "href": "/log.html" },
+    { "label": "Ask", "href": "/ask.html" },
+    { "label": "About", "href": "/about.html" }
+  ],
+  "tag_groups": [
+    { "name": "个人", "tags": ["虚拟作品评价", "杂谈"] }
+  ],
+  "slug_map": {
+    "261114屠杀器官": "genocidal-organ",
+    "260124博客的设想": "blog-vision"
+  }
+}

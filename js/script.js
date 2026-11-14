@@ -354,7 +354,8 @@
     }
     if (!window.__sidenoteLayoutBound) {
       window.__sidenoteLayoutBound = true;
-      $(window).on('load resize', layoutSidenotes);
+      window.addEventListener('load', layoutSidenotes);
+      window.addEventListener('resize', layoutSidenotes);
     }
 
     // 7. 边注与末尾脚注双向平滑跳转定位与闪烁高亮（严禁触发 PJAX 整页刷新或滚回顶部）
@@ -605,11 +606,28 @@
     var globeSvg = '<svg class="lang-icon-globe" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>';
     var sunMoonSvg = '<svg class="theme-icon-sun" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg><svg class="theme-icon-moon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
 
+    var siteData = window.SITE_DATA || {
+      github: 'https://github.com/HeptaZero',
+      email: '1004752777@qq.com',
+      tagGroups: [{
+        name: '个人',
+        count: 3,
+        tags: [
+          { name: '虚拟作品评价', count: 1, href: '/tags/虚拟作品评价.html' },
+          { name: '杂谈', count: 2, href: '/tags/杂谈.html' }
+        ]
+      }],
+      tags: [
+        { name: '虚拟作品评价', count: 1, href: '/tags/虚拟作品评价.html' },
+        { name: '杂谈', count: 2, href: '/tags/杂谈.html' }
+      ]
+    };
+
     // 移动端固定底部操作栏（PC 端 CSS 已设置为 display: none !important，绝不与顶栏重复）
     var toolbarHtml = '<div class="mobile-nav-toolbar">' +
       '<div class="mobile-nav-toolbar-left">' +
-      '  <a id="mobile-nav-github-link" class="nav-icon" href="https://github.com/HeptaZero" target="_blank" rel="noopener" title="GitHub"></a>' +
-      '  <a id="mobile-nav-mail-link" class="nav-icon" href="mailto:1004752777@qq.com" title="Email"></a>' +
+      '  <a id="mobile-nav-github-link" class="nav-icon" href="' + siteData.github + '" target="_blank" rel="noopener" title="GitHub"></a>' +
+      '  <a id="mobile-nav-mail-link" class="nav-icon" href="mailto:' + siteData.email + '" title="Email"></a>' +
       '</div>' +
       '<div class="mobile-nav-toolbar-right">' +
       '  <button class="mobile-toolbar-btn lang-toggle-btn" title="切换语言 / Switch Language" type="button" aria-label="Toggle language">' + globeSvg + '</button>' +
@@ -626,44 +644,44 @@
         '</div>';
       $mobileNav.html(tocBodyHtml + toolbarHtml);
     } else {
-      // 非文章页：展示默认标签树、标签词云与底部操作栏
+      // 非文章页：根据 site-data.js 动态渲染标签树、标签词云与底部操作栏
+      var treeGroupsHtml = '';
+      $.each(siteData.tagGroups || [], function(_, group) {
+        var leavesHtml = '';
+        $.each(group.tags || [], function(_, t) {
+          leavesHtml += '<li class="category-list-item">' +
+            '<a class="category-leaf-link" href="' + t.href + '">' +
+            '  <span class="tag-tree-dot"></span>' +
+            '  <span class="category-list-name">' + t.name + '</span>' +
+            '  <span class="category-list-count">' + t.count + '</span>' +
+            '</a>' +
+            '</li>';
+        });
+        treeGroupsHtml += '<li class="category-list-item tag-tree-open">' +
+          '<div class="category-item-row tag-tree-toggle" role="button">' +
+          '  <span class="tag-tree-arrow">▾</span>' +
+          '  <span class="category-list-name">' + group.name + '</span>' +
+          '  <span class="category-list-count">' + group.count + '</span>' +
+          '</div>' +
+          '<ul class="category-list-child">' + leavesHtml + '</ul>' +
+          '</li>';
+      });
+
       var scrollBodyHtml = '<div class="mobile-nav-categories">' +
         '  <h3 class="widget-title">标签树</h3>' +
         '  <div class="tag-tree-container">' +
-        '    <ul class="category-list tag-tree">' +
-        '      <li class="category-list-item tag-tree-open">' +
-        '        <div class="category-item-row tag-tree-toggle" role="button">' +
-        '          <span class="tag-tree-arrow">▾</span>' +
-        '          <span class="category-list-name">个人</span>' +
-        '          <span class="category-list-count">2</span>' +
-        '        </div>' +
-        '        <ul class="category-list-child">' +
-        '          <li class="category-list-item">' +
-        '            <a class="category-leaf-link" href="/tags/虚拟作品评价.html">' +
-        '              <span class="tag-tree-dot"></span>' +
-        '              <span class="category-list-name">虚拟作品评价</span>' +
-        '              <span class="category-list-count">1</span>' +
-        '            </a>' +
-        '          </li>' +
-        '          <li class="category-list-item">' +
-        '            <a class="category-leaf-link" href="/tags/杂谈.html">' +
-        '              <span class="tag-tree-dot"></span>' +
-        '              <span class="category-list-name">杂谈</span>' +
-        '              <span class="category-list-count">1</span>' +
-        '            </a>' +
-        '          </li>' +
-        '        </ul>' +
-        '      </li>' +
-        '    </ul>' +
+        '    <ul class="category-list tag-tree">' + treeGroupsHtml + '</ul>' +
         '  </div>' +
         '</div>';
 
+      var cloudLinksHtml = '';
+      $.each(siteData.tags || [], function(_, t) {
+        cloudLinksHtml += '<a href="' + t.href + '">' + t.name + '</a>';
+      });
+
       var tagCloudHtml = '<div class="mobile-nav-tagcloud">' +
         '  <h3 class="widget-title">标签词云</h3>' +
-        '  <div class="mobile-nav-tagcloud-inner">' +
-        '    <a href="/tags/虚拟作品评价.html">虚拟作品评价</a>' +
-        '    <a href="/tags/杂谈.html">杂谈</a>' +
-        '  </div>' +
+        '  <div class="mobile-nav-tagcloud-inner">' + cloudLinksHtml + '</div>' +
         '</div>';
 
       $mobileNav.html('<div class="mobile-nav-scroll-body">' + scrollBodyHtml + '</div>' + tagCloudHtml + toolbarHtml);

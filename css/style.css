@@ -3169,12 +3169,17 @@ html {
   width: 200px;
   font-size: 0.82em;
   line-height: 1.55;
+  text-align: left;
+  text-justify: auto;
   color: #64748b;
   padding: 4px 0 4px 10px;
   border-left: 2px solid #e2e8f0;
   margin-bottom: 1em;
   position: relative;
   background: transparent;
+}
+.article-entry blockquote .sidenote {
+  margin-right: calc(-0.25 * (100vw - 100%) - 116px);
 }
 .sidenote .sidenote-num {
   font-weight: 700;

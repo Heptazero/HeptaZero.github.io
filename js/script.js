@@ -63,6 +63,17 @@
       codes[i].parentElement.insertBefore(copy_button, codes[i]);
     }
 
+    // 0. 站点标签 ID 动态映射（保证即使静态链接未刷新，标签显示名也与 site-data.js 同步）
+    if (window.SITE_DATA && window.SITE_DATA.tagMap) {
+      $('[data-tag-id]').each(function() {
+        var tid = $(this).attr('data-tag-id');
+        var info = window.SITE_DATA.tagMap[tid];
+        if (info) {
+          $(this).attr('href', info.href).text(info.name);
+        }
+      });
+    }
+
     // 3. 自动生成真层级大纲并挂载到 #floating-toc
     var $floatingToc = $('#floating-toc');
     var isHome = $('#content').hasClass('is-home');
@@ -84,6 +95,7 @@
         var tocHtml = '<ol class="toc">';
         var currentTopLi = false;
         var inChildOl = false;
+        var secCounters = [];
 
         $headings.each(function(idx) {
           var $h = $(this);
@@ -92,9 +104,25 @@
             id = 'heading-' + idx;
             $h.attr('id', id);
           }
-          var text = $h.text().replace(/^#+\s*/, '').trim();
+          var text = $h.clone().find('.heading-sec-num').remove().end().text().replace(/^#+\s*/, '').trim();
           var tag = this.tagName.toLowerCase();
           var level = parseInt(tag.substring(1), 10);
+
+          // 0 起始的多级标题悬浮编号（0, 0.1, 0.2, 1, 1.1...）
+          var relLevel = Math.max(0, level - minLevel);
+          if (relLevel === 0) {
+            secCounters = [secCounters.length === 0 ? 0 : secCounters[0] + 1];
+          } else {
+            while (secCounters.length <= relLevel) {
+              secCounters.push(0);
+            }
+            secCounters[relLevel] += 1;
+            secCounters.length = relLevel + 1;
+          }
+          var secLabel = secCounters.join('.');
+          if (!$h.find('.heading-sec-num').length) {
+            $h.prepend('<span class="heading-sec-num" aria-hidden="true">' + secLabel + '</span>');
+          }
 
           if (level <= minLevel) {
             if (inChildOl) {
@@ -136,6 +164,27 @@
       $floatingToc.empty().hide();
     }
     currentArticleTocHtml = articleTocHtml;
+
+    // 3.5 自动计算正文字数（不含标点符号）与预计阅读时间，挂载到标题下方
+    $('.article-reading-stats').remove();
+    if (!isHome && !isAbout && !isAsk && $entry.length && !$('.archives-wrap').length && !$('#thoughts-list').length) {
+      var $textClone = $entry.first().clone();
+      $textClone.find('.sidenote, .hover-card, .copy-button, .article-footnotes, .heading-sec-num, script, style').remove();
+      var rawText = $textClone.text() || '';
+      var cjkMatches = rawText.match(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g);
+      var enMatches = rawText.match(/[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*/g);
+      var wordCount = (cjkMatches ? cjkMatches.length : 0) + (enMatches ? enMatches.length : 0);
+      if (wordCount > 0) {
+        var readMins = Math.max(1, Math.round(wordCount / 400));
+        var $stats = $('<div class="article-reading-stats">约 ' + wordCount.toLocaleString('en-US') + ' 字 · 预计阅读 ' + readMins + ' 分钟</div>');
+        var $logoWrap = $('#header-title #logo-wrap');
+        if ($logoWrap.length) {
+          $logoWrap.after($stats);
+        } else {
+          $('#header-title').append($stats);
+        }
+      }
+    }
 
     // 4. KaTeX 数学公式自动渲染（带重试等待机制）
     function renderMathWithRetry() {
@@ -235,15 +284,20 @@
         var $footnotesWrap = $('<div class="article-footnotes"><div class="footnotes-title">注解</div><ol class="footnotes-list"></ol></div>');
         var $list = $footnotesWrap.find('.footnotes-list');
 
+        var $refs = $articleEntry.find('.sidenote-ref');
         $sidenotes.each(function(index) {
           var noteNum = index + 1;
           var $note = $(this);
+          $note.attr('data-fn-idx', noteNum);
           
           // 提取纯注解文本（去掉原本内部的 sup 编号）
           var noteHtml = $note.clone().find('.sidenote-num').remove().end().html().trim();
 
-          // 给正文中的引用点加上返回锚点与链接
+          // 给正文中的引用点加上返回锚点与链接（兼容旁批写在引用点前或后的两种写法）
           var $prevRef = $note.prev('.sidenote-ref');
+          if (!$prevRef.length) {
+            $prevRef = $refs.eq(index);
+          }
           if ($prevRef.length) {
             $prevRef.attr('id', 'fnref-' + noteNum);
             $prevRef.html('<a href="#fn-' + noteNum + '" class="sidenote-anchor">' + noteNum + '</a>');
@@ -262,6 +316,58 @@
       }
     }
     initFootnotes();
+
+    // 6.5 桌面端平行边注自动对齐（彻底消除 float 与 blockquote 嵌套导致的横向/纵向漂移）
+    function layoutSidenotes() {
+      var $articleEntry = $('.article-entry').first();
+      if (!$articleEntry.length) return;
+      var $notes = $articleEntry.find('.sidenote');
+      if (!$notes.length) return;
+
+      if (window.innerWidth <= 1100) {
+        $notes.css({ position: '', top: '', left: '' });
+        return;
+      }
+
+      $notes.each(function() {
+        if (this.parentNode !== $articleEntry[0]) {
+          $articleEntry[0].appendChild(this);
+        }
+      });
+
+      var entryRect = $articleEntry[0].getBoundingClientRect();
+      var targetLeft = Math.round(entryRect.width + 36);
+      var lastBottom = -Infinity;
+
+      $notes.each(function() {
+        var $note = $(this);
+        var idx = $note.attr('data-fn-idx');
+        var refEl = idx ? document.getElementById('fnref-' + idx) : null;
+        if (!refEl) return;
+
+        var refRect = refEl.getBoundingClientRect();
+        var idealTop = Math.round(refRect.top - entryRect.top - 2);
+        var actualTop = Math.max(idealTop, lastBottom + 14);
+
+        $note.css({
+          position: 'absolute',
+          left: targetLeft + 'px',
+          top: actualTop + 'px'
+        });
+
+        var noteHeight = this.offsetHeight || 0;
+        lastBottom = actualTop + noteHeight;
+      });
+    }
+    layoutSidenotes();
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(layoutSidenotes);
+    }
+    if (!window.__sidenoteLayoutBound) {
+      window.__sidenoteLayoutBound = true;
+      window.addEventListener('load', layoutSidenotes);
+      window.addEventListener('resize', layoutSidenotes);
+    }
 
     // 7. 边注与末尾脚注双向平滑跳转定位与闪烁高亮（严禁触发 PJAX 整页刷新或滚回顶部）
     if (!window.__footnoteJumpHandlerAttached) {
@@ -511,11 +617,28 @@
     var globeSvg = '<svg class="lang-icon-globe" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>';
     var sunMoonSvg = '<svg class="theme-icon-sun" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg><svg class="theme-icon-moon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
 
+    var siteData = window.SITE_DATA || {
+      github: 'https://github.com/HeptaZero',
+      email: '1004752777@qq.com',
+      tagGroups: [{
+        name: '个人',
+        count: 3,
+        tags: [
+          { name: '虚拟作品评价', count: 1, href: '/tags/虚拟作品评价.html' },
+          { name: '杂谈', count: 2, href: '/tags/杂谈.html' }
+        ]
+      }],
+      tags: [
+        { name: '虚拟作品评价', count: 1, href: '/tags/虚拟作品评价.html' },
+        { name: '杂谈', count: 2, href: '/tags/杂谈.html' }
+      ]
+    };
+
     // 移动端固定底部操作栏（PC 端 CSS 已设置为 display: none !important，绝不与顶栏重复）
     var toolbarHtml = '<div class="mobile-nav-toolbar">' +
       '<div class="mobile-nav-toolbar-left">' +
-      '  <a id="mobile-nav-github-link" class="nav-icon" href="https://github.com/HeptaZero" target="_blank" rel="noopener" title="GitHub"></a>' +
-      '  <a id="mobile-nav-mail-link" class="nav-icon" href="mailto:1004752777@qq.com" title="Email"></a>' +
+      '  <a id="mobile-nav-github-link" class="nav-icon" href="' + siteData.github + '" target="_blank" rel="noopener" title="GitHub"></a>' +
+      '  <a id="mobile-nav-mail-link" class="nav-icon" href="mailto:' + siteData.email + '" title="Email"></a>' +
       '</div>' +
       '<div class="mobile-nav-toolbar-right">' +
       '  <button class="mobile-toolbar-btn lang-toggle-btn" title="切换语言 / Switch Language" type="button" aria-label="Toggle language">' + globeSvg + '</button>' +
@@ -532,36 +655,44 @@
         '</div>';
       $mobileNav.html(tocBodyHtml + toolbarHtml);
     } else {
-      // 非文章页：展示默认标签树、标签词云与底部操作栏
+      // 非文章页：根据 site-data.js 动态渲染标签树、标签词云与底部操作栏
+      var treeGroupsHtml = '';
+      $.each(siteData.tagGroups || [], function(_, group) {
+        var leavesHtml = '';
+        $.each(group.tags || [], function(_, t) {
+          leavesHtml += '<li class="category-list-item">' +
+            '<a class="category-leaf-link" href="' + t.href + '">' +
+            '  <span class="tag-tree-dot"></span>' +
+            '  <span class="category-list-name">' + t.name + '</span>' +
+            '  <span class="category-list-count">' + t.count + '</span>' +
+            '</a>' +
+            '</li>';
+        });
+        treeGroupsHtml += '<li class="category-list-item tag-tree-open">' +
+          '<div class="category-item-row tag-tree-toggle" role="button">' +
+          '  <span class="tag-tree-arrow">▾</span>' +
+          '  <span class="category-list-name">' + group.name + '</span>' +
+          '  <span class="category-list-count">' + group.count + '</span>' +
+          '</div>' +
+          '<ul class="category-list-child">' + leavesHtml + '</ul>' +
+          '</li>';
+      });
+
       var scrollBodyHtml = '<div class="mobile-nav-categories">' +
         '  <h3 class="widget-title">标签树</h3>' +
         '  <div class="tag-tree-container">' +
-        '    <ul class="category-list tag-tree">' +
-        '      <li class="category-list-item tag-tree-open">' +
-        '        <div class="category-item-row tag-tree-toggle" role="button">' +
-        '          <span class="tag-tree-arrow">▾</span>' +
-        '          <span class="category-list-name">个人</span>' +
-        '          <span class="category-list-count">1</span>' +
-        '        </div>' +
-        '        <ul class="category-list-child">' +
-        '          <li class="category-list-item">' +
-        '            <a class="category-leaf-link" href="/tags/杂谈.html">' +
-        '              <span class="tag-tree-dot"></span>' +
-        '              <span class="category-list-name">杂谈</span>' +
-        '              <span class="category-list-count">1</span>' +
-        '            </a>' +
-        '          </li>' +
-        '        </ul>' +
-        '      </li>' +
-        '    </ul>' +
+        '    <ul class="category-list tag-tree">' + treeGroupsHtml + '</ul>' +
         '  </div>' +
         '</div>';
 
+      var cloudLinksHtml = '';
+      $.each(siteData.tags || [], function(_, t) {
+        cloudLinksHtml += '<a href="' + t.href + '">' + t.name + '</a>';
+      });
+
       var tagCloudHtml = '<div class="mobile-nav-tagcloud">' +
         '  <h3 class="widget-title">标签词云</h3>' +
-        '  <div class="mobile-nav-tagcloud-inner">' +
-        '    <a href="/tags/杂谈.html">杂谈</a>' +
-        '  </div>' +
+        '  <div class="mobile-nav-tagcloud-inner">' + cloudLinksHtml + '</div>' +
         '</div>';
 
       $mobileNav.html('<div class="mobile-nav-scroll-body">' + scrollBodyHtml + '</div>' + tagCloudHtml + toolbarHtml);

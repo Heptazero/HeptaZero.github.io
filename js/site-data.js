@@ -17,13 +17,15 @@ window.SITE_DATA = {
   },
   "tagGroups": [
     {
+      "id": "personal",
       "name": "个人",
-      "count": 4,
+      "href": "/tags/personal.html",
+      "count": 3,
       "tags": [
         {
           "id": "notes",
           "name": "杂谈",
-          "count": 3,
+          "count": 2,
           "href": "/tags/notes.html"
         },
         {
@@ -39,7 +41,7 @@ window.SITE_DATA = {
     {
       "id": "notes",
       "name": "杂谈",
-      "count": 3,
+      "count": 2,
       "href": "/tags/notes.html"
     },
     {
@@ -65,14 +67,6 @@ window.SITE_DATA = {
       "tagId": "works",
       "tag": "虚拟作品评价",
       "url": "/posts/genocidal-organ.html"
-    },
-    {
-      "slug": "showcase",
-      "title": "排版与多媒体特性全景测试",
-      "date": "2026-11-01",
-      "tagId": "notes",
-      "tag": "杂谈",
-      "url": "/posts/showcase.html"
     },
     {
       "slug": "blog-vision",

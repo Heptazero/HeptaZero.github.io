@@ -74,6 +74,7 @@ def render_head(cfg: dict, title: str, description: str = "", include_katex: boo
     return f"""<head>
   <meta charset="utf-8">
   <title>{html.escape(title)}</title>{meta_desc}
+  <link rel="preload" href="/css/fonts/noto/noto-serif-sc.css" as="style">
   <link rel="stylesheet" href="/css/fonts/noto/noto-serif-sc.css">
   <link rel="stylesheet" href="/css/fonts/ChineseMono-normal-normal.min.css">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -96,17 +97,7 @@ def render_nav(cfg: dict, current_href: str = "") -> str:
           <div class="main-nav-links">
 {links_html}
           </div>
-          <div id="sub-nav">
-            <div class="sub-nav-social">
-              <a id="nav-github-link" class="nav-icon" href="{cfg['github']}" target="_blank" rel="noopener" title="GitHub"></a>
-              <a id="nav-mail-link" class="nav-icon" href="mailto:{cfg['email']}" title="Email"></a>
-            </div>
-            <button class="nav-btn lang-toggle-btn" title="切换语言 / Switch Language" type="button" aria-label="Toggle language">{LANG_SVG}</button>
-            <button class="nav-btn theme-toggle-btn" title="切换深色/浅色模式 / Toggle Dark Mode" type="button" aria-label="Toggle theme">
-              {SUN_SVG}
-              {MOON_SVG}
-            </button>
-          </div>
+          <div id="sub-nav"></div>
         </nav>
       </div>"""
 
@@ -444,7 +435,7 @@ def build_post_html(cfg: dict, post: dict) -> str:
     tag_href = tag_info["href"]
 
     return f"""<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="is-post-page">
 {head}
 <body lang="en">
   <div id="container">
@@ -663,6 +654,8 @@ def sync_shell_in_existing_html(html_path: Path, cfg: dict) -> None:
             text,
             count=1,
         )
+    if rel.startswith("/posts/"):
+        text = re.sub(r'<html\s+lang="zh-CN"(?!\s+class="is-post-page")>', '<html lang="zh-CN" class="is-post-page">', text, count=1)
 
     # Sync all article-category-link tags to stable tag IDs & current display names
     def repl_cat_link(m: re.Match) -> str:
@@ -699,12 +692,20 @@ def write_site_data_js(cfg: dict, posts: list[dict]) -> None:
 
     groups_out = []
     seen_groups: set[str] = set()
+    group_id_map = cfg.get("tag_group_ids", {})
     for gname in cfg.get("tag_groups_order", []) + sorted(grouped.keys()):
         if gname in seen_groups or not grouped.get(gname):
             continue
         seen_groups.add(gname)
         g_tags = grouped[gname]
-        groups_out.append({"name": gname, "count": sum(x["count"] for x in g_tags), "tags": g_tags})
+        gid = group_id_map.get(gname, re.sub(r"[^a-zA-Z0-9\u4e00-\u9fff_-]+", "-", gname).strip("-") or "group")
+        groups_out.append({
+            "id": gid,
+            "name": gname,
+            "href": f"/tags/{gid}.html",
+            "count": sum(x["count"] for x in g_tags),
+            "tags": g_tags,
+        })
 
     all_tags = []
     for g in groups_out:
@@ -777,13 +778,22 @@ def main() -> None:
             all_posts.append(meta)
     all_posts.sort(key=lambda p: (p["date"], p["slug"]), reverse=True)
 
-    # 3. Regenerate tags/<tag_id>.html
+    # 3. Regenerate tags/<tag_id>.html and parent group pages tags/<group_id>.html
     tags_map: dict[str, list[dict]] = defaultdict(list)
+    group_posts_map: dict[str, tuple[str, list[dict]]] = {}
+    group_id_map = cfg.get("tag_group_ids", {})
     for p in all_posts:
         tags_map[p["tag_id"]].append(p)
+        info = get_tag_info(p["tag_id"], cfg)
+        gname = info["group"]
+        gid = group_id_map.get(gname, re.sub(r"[^a-zA-Z0-9\u4e00-\u9fff_-]+", "-", gname).strip("-") or "group")
+        if gid not in group_posts_map:
+            group_posts_map[gid] = (gname, [])
+        group_posts_map[gid][1].append(p)
 
+    valid_tag_stems = set(tags_map.keys()) | set(group_posts_map.keys())
     for old_tag_file in tags_dir.glob("*.html"):
-        if old_tag_file.stem not in tags_map:
+        if old_tag_file.stem not in valid_tag_stems:
             old_tag_file.unlink()
             print(f"[clean] removed unused tag page {old_tag_file.relative_to(ROOT)}")
 
@@ -792,6 +802,13 @@ def main() -> None:
         tag_file = tags_dir / f"{tid}.html"
         tag_file.write_text(build_tag_html(cfg, info["name"], tag_posts), encoding="utf-8")
         print(f"[build] updated {tag_file.relative_to(ROOT)} -> {info['name']} ({len(tag_posts)})")
+
+    for gid, (gname, g_posts) in group_posts_map.items():
+        if gid in tags_map:
+            continue
+        g_file = tags_dir / f"{gid}.html"
+        g_file.write_text(build_tag_html(cfg, gname, g_posts), encoding="utf-8")
+        print(f"[build] updated {g_file.relative_to(ROOT)} -> {gname} ({len(g_posts)})")
 
     # 4. Regenerate archives.html
     (ROOT / "archives.html").write_text(build_archives_html(cfg, all_posts), encoding="utf-8")
@@ -804,7 +821,7 @@ def main() -> None:
 
     # 6. Write js/site-data.js & sitemap.xml
     write_site_data_js(cfg, all_posts)
-    write_sitemap_xml(cfg, all_posts, sorted(tags_map.keys()))
+    write_sitemap_xml(cfg, all_posts, sorted(valid_tag_stems))
     print("[build] updated js/site-data.js and sitemap.xml")
 
 

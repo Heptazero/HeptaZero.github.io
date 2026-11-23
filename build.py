@@ -279,6 +279,31 @@ def markdown_to_html(body: str) -> str:
             out.append("<ol>\n" + "\n".join(items) + "\n</ol>")
             continue
 
+        # Standalone image figure (supports right:/left:/small: or 右:/左:/小: prefixes)
+        img_m = re.match(r"^!\[([^\]]*)\]\(([^)]+)\)$", stripped)
+        if img_m:
+            raw_alt, src = img_m.group(1).strip(), img_m.group(2).strip()
+            fig_cls = "prose-figure"
+            caption = raw_alt
+            prefix_m = re.match(r"^(right|left|small|右|左|小)[:：]\s*(.*)$", raw_alt, re.I)
+            if prefix_m:
+                kind = prefix_m.group(1).lower()
+                caption = prefix_m.group(2).strip()
+                if kind in ("right", "右"):
+                    fig_cls = "prose-figure float-right"
+                elif kind in ("left", "左"):
+                    fig_cls = "prose-figure float-left"
+                else:
+                    fig_cls = "prose-figure compact"
+            cap_html = f"\n                  <figcaption>{html.escape(caption)}</figcaption>" if caption else ""
+            out.append(
+                f'<figure class="{fig_cls}">\n'
+                f'                  <img src="{src}" alt="{html.escape(caption)}" loading="lazy">{cap_html}\n'
+                f"                </figure>"
+            )
+            i += 1
+            continue
+
         # Paragraph
         para_lines = [stripped]
         i += 1
@@ -292,6 +317,7 @@ def markdown_to_html(body: str) -> str:
                 or re.match(r"^[-*]\s+", nxt)
                 or re.match(r"^\d+\.\s+", nxt)
                 or re.match(r"^-{3,}$", nxt)
+                or re.match(r"^!\[[^\]]*\]\([^)]+\)$", nxt)
             ):
                 break
             para_lines.append(nxt)

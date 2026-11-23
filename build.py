@@ -446,8 +446,10 @@ def build_post_html(cfg: dict, post: dict) -> str:
               </div>
               <footer class="article-footer"></footer>
             </div>
-            <div class="article-comments" id="comments"></div>
           </article>
+          <section id="comments">
+            <div id="giscus-container"></div>
+          </section>
         </section>
       </div>
       <aside id="floating-toc" style="display: none;"></aside>

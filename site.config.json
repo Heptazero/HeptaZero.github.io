@@ -6,7 +6,7 @@
   "github": "https://github.com/HeptaZero",
   "email": "1004752777@qq.com",
   "umami_id": "2079fcd8-6ac2-4f0f-aa45-9e038f533b80",
-  "asset_version": "3.10",
+  "asset_version": "3.11",
   "nav": [
     { "label": "Home", "href": "/index.html" },
     { "label": "Archives", "href": "/archives.html" },
@@ -28,7 +28,9 @@
   },
   "tag_groups_order": ["个人"],
   "slug_map": {
+    "261123请严肃证明你不是语言概率均值": "not-language-probability-mean",
     "261114屠杀器官": "genocidal-organ",
-    "260124博客的设想": "blog-vision"
+    "260124博客的设想": "blog-vision",
+    "260124梦开始的地方": "blog-vision"
   }
 }

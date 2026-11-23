@@ -4,52 +4,60 @@ window.SITE_DATA = {
   "github": "https://github.com/HeptaZero",
   "email": "1004752777@qq.com",
   "tagMap": {
-    "works": {
-      "id": "works",
-      "name": "虚拟作品评价",
-      "href": "/tags/works.html"
-    },
     "notes": {
       "id": "notes",
       "name": "杂谈",
       "href": "/tags/notes.html"
+    },
+    "works": {
+      "id": "works",
+      "name": "虚拟作品评价",
+      "href": "/tags/works.html"
     }
   },
   "tagGroups": [
     {
       "name": "个人",
-      "count": 3,
+      "count": 4,
       "tags": [
+        {
+          "id": "notes",
+          "name": "杂谈",
+          "count": 3,
+          "href": "/tags/notes.html"
+        },
         {
           "id": "works",
           "name": "虚拟作品评价",
           "count": 1,
           "href": "/tags/works.html"
-        },
-        {
-          "id": "notes",
-          "name": "杂谈",
-          "count": 2,
-          "href": "/tags/notes.html"
         }
       ]
     }
   ],
   "tags": [
     {
+      "id": "notes",
+      "name": "杂谈",
+      "count": 3,
+      "href": "/tags/notes.html"
+    },
+    {
       "id": "works",
       "name": "虚拟作品评价",
       "count": 1,
       "href": "/tags/works.html"
-    },
-    {
-      "id": "notes",
-      "name": "杂谈",
-      "count": 2,
-      "href": "/tags/notes.html"
     }
   ],
   "posts": [
+    {
+      "slug": "not-language-probability-mean",
+      "title": "请严肃证明你不是语言概率均值",
+      "date": "2026-11-23",
+      "tagId": "notes",
+      "tag": "杂谈",
+      "url": "/posts/not-language-probability-mean.html"
+    },
     {
       "slug": "genocidal-organ",
       "title": "『屠杀器官』・伊藤计划",
@@ -68,7 +76,7 @@ window.SITE_DATA = {
     },
     {
       "slug": "blog-vision",
-      "title": "博客的设想",
+      "title": "梦开始的地方",
       "date": "2026-01-24",
       "tagId": "notes",
       "tag": "杂谈",

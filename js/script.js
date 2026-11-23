@@ -17,7 +17,7 @@
     // 1. Caption 自动提取与表格横向滚动封装
     $('.article-entry, .article-inner').each(function(i){
       $(this).find('img').each(function(){
-        if ($(this).next('.caption').length || $(this).closest('.gallery-item').length) return;
+        if ($(this).next('.caption').length || $(this).closest('.gallery-item, .prose-figure').length || $(this).siblings('figcaption').length) return;
         var alt = this.alt;
         if (alt) $(this).after('<span class="caption">' + alt + '</span>');
       });
@@ -367,6 +367,60 @@
       window.__sidenoteLayoutBound = true;
       window.addEventListener('load', layoutSidenotes);
       window.addEventListener('resize', layoutSidenotes);
+    }
+
+    // 6.6 杂志风浮动配图高度自适应（让图片+图注高度尽量与右侧/左侧正文段落齐平）
+    function layoutProseFigures() {
+      var $figs = $('.article-entry .prose-figure.float-right, .article-entry .prose-figure.float-left');
+      if (!$figs.length) return;
+      if (window.innerWidth <= 768) {
+        $figs.css({ width: '', maxWidth: '' });
+        return;
+      }
+
+      $figs.each(function() {
+        var fig = this;
+        var $fig = $(fig);
+        var $nextP = $fig.next('p');
+        if (!$nextP.length) return;
+
+        var img = fig.querySelector('img');
+        if (img && !img.complete) {
+          img.addEventListener('load', layoutProseFigures, { once: true });
+          return;
+        }
+
+        // 在 150px ~ 300px 之间二分微调宽度，使图文在段落末尾尽量齐平
+        var low = 150, high = 300;
+        var bestW = 240;
+        var bestDiff = Infinity;
+        for (var step = 0; step < 7; step++) {
+          var mid = Math.round((low + high) / 2);
+          fig.style.width = mid + 'px';
+          fig.style.maxWidth = mid + 'px';
+          var figH = fig.offsetHeight;
+          var pH = $nextP[0].offsetHeight;
+          var diff = Math.abs(figH - pH);
+          if (diff < bestDiff) {
+            bestDiff = diff;
+            bestW = mid;
+          }
+          if (figH > pH) {
+            high = mid - 1;
+          } else {
+            low = mid + 1;
+          }
+        }
+        fig.style.width = bestW + 'px';
+        fig.style.maxWidth = bestW + 'px';
+      });
+      layoutSidenotes();
+    }
+    layoutProseFigures();
+    if (!window.__proseFigureLayoutBound) {
+      window.__proseFigureLayoutBound = true;
+      window.addEventListener('load', layoutProseFigures);
+      window.addEventListener('resize', layoutProseFigures);
     }
 
     // 7. 边注与末尾脚注双向平滑跳转定位与闪烁高亮（严禁触发 PJAX 整页刷新或滚回顶部）

@@ -1540,11 +1540,11 @@ body.dark-mode .article-entry.index-entry.is-overflow:after {
   cursor: zoom-in;
 }
 .prose-figure figcaption {
-  margin-top: 0.55em;
+  margin-top: 0.45em;
   font-size: 0.84em;
-  line-height: 1.55;
+  line-height: 1.5;
   color: #6b7280;
-  text-align: left;
+  text-align: center;
 }
 .prose-figure.compact {
   max-width: 58%;
@@ -1554,15 +1554,15 @@ body.dark-mode .article-entry.index-entry.is-overflow:after {
 }
 .prose-figure.float-right {
   float: right;
-  width: 42%;
-  max-width: 300px;
-  margin: 0.35em 0 1em 1.8em;
+  width: 40%;
+  max-width: 280px;
+  margin: 0.25em 0 0.45em 1.6em;
 }
 .prose-figure.float-left {
   float: left;
-  width: 42%;
-  max-width: 300px;
-  margin: 0.35em 1.8em 1em 0;
+  width: 40%;
+  max-width: 280px;
+  margin: 0.25em 1.6em 0.45em 0;
 }
 html.dark-mode .prose-figure figcaption {
   color: #9ca3af;

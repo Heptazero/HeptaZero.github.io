@@ -91,13 +91,16 @@ def render_nav(cfg: dict, current_href: str = "") -> str:
         cls = "main-nav-link current" if item["href"] == current_href else "main-nav-link"
         links.append(f'            <a class="{cls}" href="{item["href"]}">{html.escape(item["label"])}</a>')
     links_html = "\n".join(links)
+    avatar_cls = "nav-avatar-link current" if current_href == "/about.html" else "nav-avatar-link"
     return f"""      <div id="nav-outer">
         <nav id="main-nav" class="outer">
           <a id="main-nav-toggle" class="nav-icon" title="Menu"></a>
           <div class="main-nav-links">
 {links_html}
           </div>
-          <div id="sub-nav"></div>
+          <div id="sub-nav">
+            <a id="nav-avatar-link" class="{avatar_cls}" href="/about.html" title="About"><img src="/images/avatar.jpg" alt="About" class="nav-avatar-img"></a>
+          </div>
         </nav>
       </div>"""
 
@@ -616,7 +619,8 @@ def sync_shell_in_existing_html(html_path: Path, cfg: dict) -> None:
 
     # Determine current_href for nav active state
     rel = "/" + html_path.relative_to(ROOT).as_posix()
-    current_href = rel if rel in {item["href"] for item in cfg["nav"]} else ""
+    valid_nav_hrefs = {item["href"] for item in cfg["nav"]} | {"/about.html"}
+    current_href = rel if rel in valid_nav_hrefs else ""
 
     # Sync <nav id="main-nav">...</nav>
     text = re.sub(
@@ -748,6 +752,40 @@ def write_sitemap_xml(cfg: dict, posts: list[dict], tags: list[str]) -> None:
     (ROOT / "sitemap.xml").write_text(xml, encoding="utf-8")
 
 
+def sync_about_from_md(cfg: dict) -> None:
+    about_md = ROOT / "md" / "00_about.md"
+    about_html = ROOT / "about.html"
+    if not about_md.exists() or not about_html.exists():
+        return
+    raw_md = about_md.read_text(encoding="utf-8").strip()
+    if not raw_md:
+        return
+    prose_html = markdown_to_html(raw_md)
+    github_url = html.escape(cfg["github"])
+    email_addr = html.escape(cfg["email"])
+    contact_block = (
+        '                <div class="about-contact-links">\n'
+        f'                  <a id="about-github-link" class="nav-icon about-contact-icon" href="{github_url}" target="_blank" rel="noopener" title="GitHub"></a>\n'
+        f'                  <a id="about-mail-link" class="nav-icon about-contact-icon" href="mailto:{email_addr}" title="Email"></a>\n'
+        "                </div>"
+    )
+    new_entry = (
+        '<div class="e-content article-entry" itemprop="articleBody">\n'
+        f"{prose_html}\n"
+        f"{contact_block}\n"
+        "              </div>"
+    )
+    text = about_html.read_text(encoding="utf-8")
+    text = re.sub(
+        r'<div class="e-content article-entry" itemprop="articleBody">.*?</div>\s*(?=</div>\s*</article>)',
+        new_entry + "\n            ",
+        text,
+        count=1,
+        flags=re.S,
+    )
+    about_html.write_text(text, encoding="utf-8")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build and synchronize HeptaZero static blog.")
     parser.add_argument("--rebuild-posts", action="store_true", help="Also overwrite existing posts/*.html from md/*.md")
@@ -810,9 +848,11 @@ def main() -> None:
         g_file.write_text(build_tag_html(cfg, gname, g_posts), encoding="utf-8")
         print(f"[build] updated {g_file.relative_to(ROOT)} -> {gname} ({len(g_posts)})")
 
-    # 4. Regenerate archives.html
+    # 4. Regenerate archives.html & sync about.html from md/00_about.md
     (ROOT / "archives.html").write_text(build_archives_html(cfg, all_posts), encoding="utf-8")
     print(f"[build] updated archives.html ({len(all_posts)} posts)")
+    sync_about_from_md(cfg)
+    print("[build] synchronized about.html from md/00_about.md")
 
     # 5. Sync shared shell & asset versions across all HTML files
     for html_file in list(ROOT.glob("*.html")) + list(posts_dir.glob("*.html")):

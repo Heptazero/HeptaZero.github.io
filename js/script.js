@@ -647,7 +647,7 @@
         fCanvas.height = H * dpr;
         ctx.scale(dpr, dpr);
 
-        // 1. 离屏渲染标题字体并提取边缘像素点
+        // 1. 离屏渲染标题字体并用亚像素 Marching Squares 提取严格闭合的无交叉轮廓环
         var off = document.createElement('canvas');
         off.width = W;
         off.height = H;
@@ -659,81 +659,204 @@
         octx.fillText(titleText, W / 2, H / 2);
 
         var img = octx.getImageData(0, 0, W, H).data;
-        function isSolid(px, py) {
-          if (px < 0 || px >= W || py < 0 || py >= H) return false;
-          return img[(py * W + px) * 4 + 3] > 128;
+        function alphaAt(px, py) {
+          if (px < 0 || px >= W || py < 0 || py >= H) return 0;
+          return img[(py * W + px) * 4 + 3];
         }
-        var edgePts = [];
-        for (var x = 1; x < W - 1; x++) {
-          for (var y = 1; y < H - 1; y++) {
-            if (isSolid(x, y) && (!isSolid(x - 1, y) || !isSolid(x + 1, y) || !isSolid(x, y - 1) || !isSolid(x, y + 1))) {
-              edgePts.push({ x: x, y: y, used: false });
-            }
+        var T = 128;
+        function lerpEdge(v0, v1) {
+          var d = v1 - v0;
+          if (Math.abs(d) < 1e-5) return 0.5;
+          var u = (T - v0) / d;
+          return u < 0 ? 0 : (u > 1 ? 1 : u);
+        }
+
+        var edgePtsMap = {};
+        var nextEdgeMap = {};
+        var WH = W * H;
+        function setDirEdge(inKey, outKey, pIn, pOut) {
+          edgePtsMap[inKey] = pIn;
+          edgePtsMap[outKey] = pOut;
+          nextEdgeMap[inKey] = outKey;
+        }
+
+        for (var y = 0; y < H - 1; y++) {
+          for (var x = 0; x < W - 1; x++) {
+            var a00 = alphaAt(x, y);
+            var a10 = alphaAt(x + 1, y);
+            var a11 = alphaAt(x + 1, y + 1);
+            var a01 = alphaAt(x, y + 1);
+            var mask = (a00 >= T ? 1 : 0) | (a10 >= T ? 2 : 0) | (a11 >= T ? 4 : 0) | (a01 >= T ? 8 : 0);
+            if (mask === 0 || mask === 15) continue;
+
+            var k0 = y * W + x;
+            var k1 = WH + y * W + (x + 1);
+            var k2 = (y + 1) * W + x;
+            var k3 = WH + y * W + x;
+
+            var p0 = { x: x + lerpEdge(a00, a10), y: y };
+            var p1 = { x: x + 1, y: y + lerpEdge(a10, a11) };
+            var p2 = { x: x + lerpEdge(a01, a11), y: y + 1 };
+            var p3 = { x: x, y: y + lerpEdge(a00, a01) };
+
+            if (mask === 1) setDirEdge(k3, k0, p3, p0);
+            else if (mask === 2) setDirEdge(k0, k1, p0, p1);
+            else if (mask === 3) setDirEdge(k3, k1, p3, p1);
+            else if (mask === 4) setDirEdge(k1, k2, p1, p2);
+            else if (mask === 5) { setDirEdge(k3, k2, p3, p2); setDirEdge(k1, k0, p1, p0); }
+            else if (mask === 6) setDirEdge(k0, k2, p0, p2);
+            else if (mask === 7) setDirEdge(k3, k2, p3, p2);
+            else if (mask === 8) setDirEdge(k2, k3, p2, p3);
+            else if (mask === 9) setDirEdge(k2, k0, p2, p0);
+            else if (mask === 10) { setDirEdge(k0, k3, p0, p3); setDirEdge(k2, k1, p2, p1); }
+            else if (mask === 11) setDirEdge(k2, k1, p2, p1);
+            else if (mask === 12) setDirEdge(k1, k3, p1, p3);
+            else if (mask === 13) setDirEdge(k1, k0, p1, p0);
+            else if (mask === 14) setDirEdge(k0, k3, p0, p3);
           }
         }
-        if (edgePts.length < 40) {
+
+        // 2. 追踪所有独立的闭合轮廓环并按从左到右排序
+        var visitedKey = {};
+        var loops = [];
+        for (var startKey in nextEdgeMap) {
+          if (!nextEdgeMap.hasOwnProperty(startKey) || visitedKey[startKey]) continue;
+          var loop = [];
+          var curr = startKey;
+          var minX = Infinity, sumX = 0, sumY = 0;
+          while (curr !== undefined && !visitedKey[curr]) {
+            visitedKey[curr] = true;
+            var pt = edgePtsMap[curr];
+            if (pt) {
+              loop.push({ x: pt.x, y: pt.y });
+              if (pt.x < minX) minX = pt.x;
+              sumX += pt.x;
+              sumY += pt.y;
+            }
+            curr = nextEdgeMap[curr];
+          }
+          if (loop.length >= 14) {
+            // 对闭合环做 2 轮轻微平滑
+            for (var lp = 0; lp < 2; lp++) {
+              var sm = [];
+              var L = loop.length;
+              for (var li = 0; li < L; li++) {
+                var pPrev = loop[(li - 1 + L) % L];
+                var pCur = loop[li];
+                var pNext = loop[(li + 1) % L];
+                sm.push({
+                  x: 0.2 * pPrev.x + 0.6 * pCur.x + 0.2 * pNext.x,
+                  y: 0.2 * pPrev.y + 0.6 * pCur.y + 0.2 * pNext.y
+                });
+              }
+              loop = sm;
+            }
+            loops.push({
+              pts: loop,
+              minX: minX,
+              cx: sumX / loop.length,
+              cy: sumY / loop.length
+            });
+          }
+        }
+
+        if (!loops.length) {
           $logo.removeClass('fourier-hidden').css('display', '');
           $fCanvas.remove();
           return;
         }
 
-        // 2. 从左到右最近邻贪心串联成一条连续闭合路径
-        var ordered = [];
-        var cur = edgePts[0];
-        cur.used = true;
-        ordered.push({ x: cur.x, y: cur.y });
-        for (var step = 1; step < edgePts.length; step++) {
-          var bestIdx = -1;
-          var bestCost = Infinity;
-          for (var j = 0; j < edgePts.length; j++) {
-            var p = edgePts[j];
-            if (p.used) continue;
-            var dx = p.x - cur.x;
-            var dy = p.y - cur.y;
-            var d2 = dx * dx + dy * dy;
-            // 同字母内部优先紧邻，跨字母跳跃倾向于向右推进
-            var cost = d2 > 25 ? d2 * 1.4 + Math.max(0, -dx) * 40 : d2;
-            if (cost < bestCost) {
-              bestCost = cost;
-              bestIdx = j;
+        // 先取最左侧轮廓环，之后每次挑选距离当前环最接近且靠右的下一个环（同字母内环紧随外环）
+        loops.sort(function(a, b) { return a.minX - b.minX; });
+        var orderedLoops = [loops[0]];
+        loops[0].used = true;
+        for (var stepL = 1; stepL < loops.length; stepL++) {
+          var prevL = orderedLoops[orderedLoops.length - 1];
+          var bestL = -1, bestScore = Infinity;
+          for (var lj = 0; lj < loops.length; lj++) {
+            if (loops[lj].used) continue;
+            var cand = loops[lj];
+            var dxL = cand.cx - prevL.cx;
+            var dyL = cand.cy - prevL.cy;
+            var distL = Math.hypot(dxL, dyL);
+            // 同一个字母的内外环（水平中心几乎重合）优先连续画完，否则向右推进到下一个字母
+            var score = Math.abs(dxL) < 14 ? distL * 0.4 : (cand.minX - prevL.cx) + distL * 0.5 + (dxL < -14 ? 500 : 0);
+            if (score < bestScore) {
+              bestScore = score;
+              bestL = lj;
             }
           }
-          if (bestIdx === -1) break;
-          cur = edgePts[bestIdx];
-          cur.used = true;
-          ordered.push({ x: cur.x, y: cur.y });
+          if (bestL === -1) break;
+          loops[bestL].used = true;
+          orderedLoops.push(loops[bestL]);
         }
 
-        // 3. 对相邻像素点做 3 轮拉普拉斯平滑，消除整数像素锯齿阶梯感
-        for (var pass = 0; pass < 3; pass++) {
-          var smoothed = [ordered[0]];
-          for (var sIdx = 1; sIdx < ordered.length - 1; sIdx++) {
-            var prevP = ordered[sIdx - 1], curP = ordered[sIdx], nextP = ordered[sIdx + 1];
-            var dPrev = Math.hypot(curP.x - prevP.x, curP.y - prevP.y);
-            var dNext = Math.hypot(nextP.x - curP.x, nextP.y - curP.y);
-            if (dPrev < 6 && dNext < 6) {
-              smoothed.push({
-                x: 0.25 * prevP.x + 0.5 * curP.x + 0.25 * nextP.x,
-                y: 0.25 * prevP.y + 0.5 * curP.y + 0.25 * nextP.y
+        // 3. 旋转每个闭合环使其起点最靠近上一环终点，并在环与环之间插入余弦平滑过渡桥（消除阶跃跳变与吉布斯振荡）
+        var rawTrack = [];
+        var lastExit = { x: orderedLoops[0].pts[0].x, y: orderedLoops[0].pts[0].y };
+        for (var oi = 0; oi < orderedLoops.length; oi++) {
+          var lPts = orderedLoops[oi].pts;
+          var bestStart = 0, bestD = Infinity;
+          for (var si = 0; si < lPts.length; si++) {
+            var d = Math.hypot(lPts[si].x - lastExit.x, lPts[si].y - lastExit.y);
+            if (d < bestD) { bestD = d; bestStart = si; }
+          }
+          var entryPt = lPts[bestStart];
+          if (oi > 0) {
+            for (var dw0 = 0; dw0 < 2; dw0++) {
+              rawTrack.push({ x: lastExit.x, y: lastExit.y, pen: false });
+            }
+            var gap = Math.hypot(entryPt.x - lastExit.x, entryPt.y - lastExit.y);
+            var bridgeCount = Math.max(4, Math.min(18, Math.round(gap / 3.5)));
+            for (var bi = 1; bi <= bridgeCount; bi++) {
+              var u = 0.5 - 0.5 * Math.cos((Math.PI * bi) / (bridgeCount + 1));
+              rawTrack.push({
+                x: lastExit.x + (entryPt.x - lastExit.x) * u,
+                y: lastExit.y + (entryPt.y - lastExit.y) * u,
+                pen: false
               });
-            } else {
-              smoothed.push(curP);
+            }
+            for (var dw1 = 0; dw1 < 2; dw1++) {
+              rawTrack.push({ x: entryPt.x, y: entryPt.y, pen: false });
             }
           }
-          smoothed.push(ordered[ordered.length - 1]);
-          ordered = smoothed;
+          for (var pi = 0; pi <= lPts.length; pi++) {
+            var p = lPts[(bestStart + pi) % lPts.length];
+            rawTrack.push({ x: p.x, y: p.y, pen: true });
+          }
+          lastExit = entryPt;
+        }
+        // 句末 o 回到句首 H 的平滑余弦闭合回桥（两端驻留刹停 + 抬笔移动，彻底消除跨屏三角尖刺与入笔拐角牵引）
+        var firstPt = rawTrack[0];
+        for (var dw2 = 0; dw2 < 2; dw2++) {
+          rawTrack.push({ x: lastExit.x, y: lastExit.y, pen: false });
+        }
+        var returnCount = 34;
+        for (var ri = 1; ri <= returnCount; ri++) {
+          var ru = 0.5 - 0.5 * Math.cos((Math.PI * ri) / (returnCount + 1));
+          rawTrack.push({
+            x: lastExit.x + (firstPt.x - lastExit.x) * ru,
+            y: lastExit.y + (firstPt.y - lastExit.y) * ru,
+            pen: false
+          });
+        }
+        for (var dw3 = 0; dw3 < 2; dw3++) {
+          rawTrack.push({ x: firstPt.x, y: firstPt.y, pen: false });
         }
 
-        // 4. 均匀重采样 N 个复平面采样点 z_k = (x - W/2) + i (y - H/2)
-        var N = Math.min(560, ordered.length);
+        // 4. 抽取 N 个周期采样点并记录每段的落笔/抬笔状态
+        var N = 640;
         var samples = [];
+        var penMask = [];
         for (var k = 0; k < N; k++) {
-          var pt = ordered[Math.floor((k * ordered.length) / N)];
-          samples.push({ re: pt.x - W / 2, im: pt.y - H / 2 });
+          var idx = Math.floor((k * rawTrack.length) / N);
+          var rPt = rawTrack[idx];
+          samples.push({ re: rPt.x - W / 2, im: rPt.y - H / 2 });
+          penMask.push(!!rPt.pen);
         }
 
-        // 5. 计算复数离散傅里叶变换 (Complex DFT)
-        var M = Math.min(150, Math.floor((N - 1) / 2));
+        // 5. 计算复数离散傅里叶变换 (Complex DFT) + Lanczos sigma 平滑因子抑制高频振铃
+        var M = 220;
         var epicycles = [];
         for (var freq = -M; freq <= M; freq++) {
           var sumRe = 0, sumIm = 0;
@@ -745,9 +868,15 @@
           }
           sumRe /= N;
           sumIm /= N;
+          // 轻微 Lanczos 窗函数衰减极高频谐波，彻底消除过采样插值抖动
+          var sigma = 1;
+          if (freq !== 0) {
+            var arg = (Math.PI * Math.abs(freq)) / (M + 1);
+            sigma = Math.pow(Math.sin(arg) / arg, 0.55);
+          }
           epicycles.push({
             freq: freq,
-            amp: Math.hypot(sumRe, sumIm),
+            amp: Math.hypot(sumRe, sumIm) * sigma,
             phase: Math.atan2(sumIm, sumRe)
           });
         }
@@ -758,11 +887,10 @@
           return b.amp - a.amp;
         });
 
-        var cycleSteps = 1350;
-        var maxPathLen = Math.floor(cycleSteps * 0.94);
+        var cycleSteps = 1280;
+        var maxPathLen = Math.floor(cycleSteps * 0.93);
         var path = [];
-        var t = 0;
-        var dt = (2 * Math.PI) / cycleSteps;
+        var stepCounter = 0;
         var showGears = true;
 
         var fClickTimer = null;
@@ -775,7 +903,7 @@
             fClickTimer = setTimeout(function() {
               fClickTimer = null;
               path.length = 0;
-              t = 0;
+              stepCounter = 0;
             }, 220);
           }
         };
@@ -801,7 +929,10 @@
             ctx.fillStyle = ghostColor;
             ctx.fillText(titleText, W / 2, H / 2);
 
-            // 每帧只推进 1 个精细采样步（1350 步/圈，约 22 秒从容循环一圈，永不间断）
+            var t = (2 * Math.PI * stepCounter) / cycleSteps;
+            var sampleIdx = Math.floor((stepCounter * N) / cycleSteps) % N;
+            var isPenDown = penMask[sampleIdx];
+
             var x = W / 2, y = H / 2;
             var joints = [{ x: x, y: y }];
             for (var i = 0; i < epicycles.length; i++) {
@@ -815,29 +946,25 @@
               }
             }
 
-            path.push({ x: x, y: y });
+            path.push({ x: x, y: y, pen: isPenDown });
             if (path.length > maxPathLen) {
               path.shift();
             }
-            t = (t + dt) % (Math.PI * 2);
+            stepCounter = (stepCounter + 1) % cycleSteps;
 
-            // 绘制循环渐隐的标题轮廓（尾部柔和淡出，笔尖处最清晰，跨字母跳步自动飞白，句末回跳自动抬笔）
+            // 绘制循环渐隐的标题轮廓（仅在轮廓环 pen=true 时落笔，跨环过渡与句末回桥自动抬笔）
             if (path.length > 1) {
               for (var pIdx = 1; pIdx < path.length; pIdx++) {
                 var p0 = path[pIdx - 1], p1 = path[pIdx];
+                if (!p0.pen || !p1.pen) continue;
                 var jumpDist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
-                if (jumpDist > 42) continue;
+                if (jumpDist > 12) continue;
                 var fade = Math.pow(pIdx / path.length, 0.65);
                 ctx.beginPath();
                 ctx.moveTo(p0.x, p0.y);
                 ctx.lineTo(p1.x, p1.y);
-                if (jumpDist > 7) {
-                  ctx.strokeStyle = 'rgba(' + inkRGB + ', ' + (0.13 * fade).toFixed(3) + ')';
-                  ctx.lineWidth = 0.7;
-                } else {
-                  ctx.strokeStyle = 'rgba(' + inkRGB + ', ' + (0.94 * fade).toFixed(3) + ')';
-                  ctx.lineWidth = 1.55;
-                }
+                ctx.strokeStyle = 'rgba(' + inkRGB + ', ' + (0.94 * fade).toFixed(3) + ')';
+                ctx.lineWidth = 1.55;
                 ctx.lineCap = 'round';
                 ctx.stroke();
               }
@@ -1194,11 +1321,40 @@
       Math.max(x, window.innerWidth - x),
       Math.max(y, window.innerHeight - y)
     );
+    var isMobileDevice = window.innerWidth <= 810 || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 
+    document.documentElement.classList.add('is-theme-transitioning');
     var transition = document.startViewTransition(function() {
       applyTheme(next, true);
     });
+    if (transition.finished && transition.finished.then) {
+      transition.finished.then(function() {
+        document.documentElement.classList.remove('is-theme-transitioning');
+      }, function() {
+        document.documentElement.classList.remove('is-theme-transitioning');
+      });
+    } else {
+      setTimeout(function() {
+        document.documentElement.classList.remove('is-theme-transitioning');
+      }, 950);
+    }
+
     transition.ready.then(function() {
+      if (isMobileDevice) {
+        // 移动端真机跳过极其消耗 Retina GPU 填充率的双层实时高斯模糊，仅执行硬件合成的圆形 clip-path 扩散
+        document.documentElement.animate(
+          [
+            { clipPath: 'circle(0px at ' + x + 'px ' + y + 'px)' },
+            { clipPath: 'circle(' + Math.round(endRadius) + 'px at ' + x + 'px ' + y + 'px)' }
+          ],
+          {
+            duration: 560,
+            easing: 'cubic-bezier(0.76, 0, 0.24, 1)',
+            pseudoElement: '::view-transition-new(root)'
+          }
+        );
+        return;
+      }
       document.documentElement.animate(
         [
           { clipPath: 'circle(0px at ' + x + 'px ' + y + 'px)', filter: 'blur(10px)', offset: 0 },
@@ -1398,6 +1554,11 @@
         $(this).removeClass('current');
       }
     });
+    var avatarLink = document.getElementById('nav-avatar-link');
+    if (avatarLink) {
+      if (filename === 'about.html') avatarLink.classList.add('current');
+      else avatarLink.classList.remove('current');
+    }
   }
 
   // 手机端侧边栏基础交互
@@ -1445,7 +1606,6 @@
 
     function hasCollision() {
       var toggle = document.getElementById('main-nav-toggle');
-      var toolbar = document.querySelector('.reader-toolbar');
       var leftEdge = 20;
       if (toggle) {
         var tRect = toggle.getBoundingClientRect();
@@ -1454,12 +1614,7 @@
         }
       }
       var rightEdge = window.innerWidth - 20;
-      if (toolbar) {
-        var tbRect = toolbar.getBoundingClientRect();
-        if (tbRect.width > 0) {
-          rightEdge = Math.min(rightEdge, tbRect.left);
-        }
-      } else if (subNav && subNav.children.length > 0) {
+      if (subNav && subNav.children.length > 0) {
         var sRect = subNav.getBoundingClientRect();
         if (sRect.width > 0) {
           rightEdge = Math.min(rightEdge, sRect.left);
@@ -1473,8 +1628,8 @@
       social.classList.add('nav-is-folded');
     }
 
-    // 折叠优先级：Log -> Ask -> About -> Archives -> Home（当前所在页面最后保留）
-    var foldOrder = ['/log.html', '/ask.html', '/about.html', '/archives.html', '/index.html'];
+    // 折叠优先级：Log -> Ask -> Archives -> Home（当前所在页面最后保留）
+    var foldOrder = ['/log.html', '/ask.html', '/archives.html', '/index.html'];
     for (var pass = 0; pass < 2 && hasCollision(); pass++) {
       for (var i = 0; i < foldOrder.length && hasCollision(); i++) {
         var href = foldOrder[i];

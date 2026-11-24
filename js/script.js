@@ -317,17 +317,38 @@
     }
     initFootnotes();
 
-    // 6.5 桌面端平行边注自动对齐（彻底消除 float 与 blockquote 嵌套导致的横向/纵向漂移）
+    // 6.5 桌面端平行边注自动对齐 + 左侧大纲防碰撞自适应宽度
     function layoutSidenotes() {
+      var mainEl = document.getElementById('main');
+      var tocEl = document.getElementById('floating-toc');
+      if (mainEl && tocEl && tocEl.innerHTML.trim()) {
+        var mainRect = mainEl.getBoundingClientRect();
+        var leftGutter = Math.floor(mainRect.left - 34);
+        if (window.innerWidth <= 1100 || leftGutter < 120) {
+          tocEl.style.maxWidth = '';
+          tocEl.classList.add('toc-auto-hidden');
+          tocEl.style.opacity = '0';
+          tocEl.style.pointerEvents = 'none';
+        } else {
+          tocEl.classList.remove('toc-auto-hidden');
+          tocEl.style.maxWidth = leftGutter + 'px';
+          tocEl.style.opacity = '';
+          tocEl.style.pointerEvents = '';
+        }
+      }
+
       var $articleEntry = $('.article-entry').first();
       if (!$articleEntry.length) return;
       var $notes = $articleEntry.find('.sidenote');
       if (!$notes.length) return;
 
-      if (window.innerWidth <= 1100) {
-        $notes.css({ position: '', top: '', left: '' });
+      var entryRect = $articleEntry[0].getBoundingClientRect();
+      var rightGutter = Math.floor(window.innerWidth - entryRect.right - 44);
+      if (window.innerWidth <= 1100 || rightGutter < 180) {
+        $notes.css({ position: '', top: '', left: '', display: window.innerWidth > 1100 ? 'none' : '' });
         return;
       }
+      $notes.css({ display: '' });
 
       $notes.each(function() {
         if (this.parentNode !== $articleEntry[0]) {
@@ -360,67 +381,641 @@
       });
     }
     layoutSidenotes();
+    window.__layoutSidenotes = layoutSidenotes;
     if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(layoutSidenotes);
+      document.fonts.ready.then(function() {
+        if (window.__layoutSidenotes) window.__layoutSidenotes();
+      });
     }
     if (!window.__sidenoteLayoutBound) {
       window.__sidenoteLayoutBound = true;
-      window.addEventListener('load', layoutSidenotes);
-      window.addEventListener('resize', layoutSidenotes);
+      window.addEventListener('load', function() {
+        if (window.__layoutSidenotes) window.__layoutSidenotes();
+      });
+      window.addEventListener('resize', function() {
+        if (window.__layoutSidenotes) window.__layoutSidenotes();
+      });
     }
 
-    // 6.6 杂志风浮动配图高度自适应（让图片+图注高度尽量与右侧/左侧正文段落齐平）
+    // 6.6 杂志风浮动配图加载完成后同步刷新右侧旁批坐标
     function layoutProseFigures() {
       var $figs = $('.article-entry .prose-figure.float-right, .article-entry .prose-figure.float-left');
       if (!$figs.length) return;
-      if (window.innerWidth <= 768) {
-        $figs.css({ width: '', maxWidth: '' });
-        return;
+      $figs.css({ width: '', maxWidth: '' });
+      $figs.each(function() {
+        var img = this.querySelector('img');
+        if (img && !img.complete) {
+          img.addEventListener('load', function() {
+            if (window.__layoutSidenotes) window.__layoutSidenotes();
+          }, { once: true });
+        }
+      });
+      if (window.__layoutSidenotes) window.__layoutSidenotes();
+    }
+    layoutProseFigures();
+    window.__layoutProseFigures = layoutProseFigures;
+    if (!window.__proseFigureLayoutBound) {
+      window.__proseFigureLayoutBound = true;
+      window.addEventListener('load', function() {
+        if (window.__layoutProseFigures) window.__layoutProseFigures();
+      });
+      window.addEventListener('resize', function() {
+        if (window.__layoutProseFigures) window.__layoutProseFigures();
+      });
+    }
+
+    // 6.7 文章页左上角极简阅读控制条（A- / A+ · 版心宽度切换 · 专注阅读模式）
+    $('.reader-toolbar').remove();
+    var isPostPage = !isHome && !isAbout && !isAsk && $entry.length && !$('.archives-wrap').length && !$('#thoughts-list').length && !$('.dynamic-stream').length;
+    if (isPostPage) {
+      document.documentElement.classList.add('is-post-page');
+    } else {
+      document.documentElement.classList.remove('is-post-page');
+    }
+    if (isPostPage) {
+      var prefs = { size: 16, width: 'normal', focus: false };
+      try {
+        var saved = JSON.parse(localStorage.getItem('heptazero_reader_prefs') || '{}');
+        if (saved.size >= 14 && saved.size <= 22) prefs.size = saved.size;
+        if (saved.width === 'narrow' || saved.width === 'normal' || saved.width === 'wide') prefs.width = saved.width;
+      } catch (e) {}
+
+      function applyReaderPrefs(animateSidenotes) {
+        document.documentElement.style.setProperty('--reader-font-size', prefs.size + 'px');
+        $('html').removeClass('reader-width-narrow reader-width-wide');
+        if (prefs.width === 'narrow') $('html').addClass('reader-width-narrow');
+        if (prefs.width === 'wide') $('html').addClass('reader-width-wide');
+        if (prefs.focus) {
+          $('html').addClass('reader-focus-mode');
+        } else {
+          $('html').removeClass('reader-focus-mode');
+        }
+        try {
+          localStorage.setItem('heptazero_reader_prefs', JSON.stringify({ size: prefs.size, width: prefs.width }));
+        } catch (e) {}
+        layoutSidenotes();
+        if (window.__updateStickySectionHeader) window.__updateStickySectionHeader();
+        if (animateSidenotes) {
+          var animStart = Date.now();
+          function syncWidthTransitionFrame() {
+            layoutSidenotes();
+            if (window.__updateStickySectionHeader) window.__updateStickySectionHeader();
+            if (Date.now() - animStart < 400) {
+              requestAnimationFrame(syncWidthTransitionFrame);
+            }
+          }
+          requestAnimationFrame(syncWidthTransitionFrame);
+        }
+      }
+      applyReaderPrefs(false);
+
+      var widthIcons = {
+        normal: '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="5" x2="4" y2="19"></line><line x1="20" y1="5" x2="20" y2="19"></line><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="15" x2="16" y2="15"></line></svg>',
+        wide: '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 8 3 12 7 16"></polyline><polyline points="17 8 21 12 17 16"></polyline><line x1="3" y1="12" x2="21" y2="12"></line></svg>',
+        narrow: '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 8 8 12 4 16"></polyline><polyline points="20 8 16 12 20 16"></polyline><line x1="12" y1="5" x2="12" y2="19"></line></svg>'
+      };
+      var focusIcon = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>';
+      var widthLabels = { narrow: '窄', normal: '标准', wide: '宽' };
+      var widthOrder = ['normal', 'wide', 'narrow'];
+
+      var $toolbar = $(
+        '<div class="reader-toolbar" aria-label="阅读设置">' +
+          '<button type="button" class="reader-tool-btn" data-reader-focus="toggle" title="专注阅读 (Esc 退出)">' + focusIcon + '</button>' +
+          '<span class="reader-tool-divider"></span>' +
+          '<button type="button" class="reader-tool-btn" data-reader-size="1" title="放大字号">A+</button>' +
+          '<button type="button" class="reader-tool-btn" data-reader-size="-1" title="缩小字号">A-</button>' +
+          '<span class="reader-tool-divider reader-width-divider"></span>' +
+          '<button type="button" class="reader-tool-btn reader-width-btn" data-reader-width="cycle" title="切换版心宽度">' + widthIcons[prefs.width] + '</button>' +
+        '</div>'
+      );
+
+      function syncToolbarUI() {
+        $toolbar.find('[data-reader-width]')
+          .html(widthIcons[prefs.width])
+          .attr('title', '版心宽度：' + widthLabels[prefs.width] + '（点击切换）');
+        var focusBtn = $toolbar.find('[data-reader-focus]')[0];
+        if (focusBtn) {
+          if (prefs.focus) focusBtn.classList.add('is-active');
+          else focusBtn.classList.remove('is-active');
+        }
+      }
+      syncToolbarUI();
+
+      $toolbar.find('[data-reader-size]').bind('click', function(e) {
+        e.stopPropagation();
+        var delta = parseInt($(this).attr('data-reader-size'), 10);
+        prefs.size = Math.min(22, Math.max(14, prefs.size + delta));
+        applyReaderPrefs(true);
+        syncToolbarUI();
+      });
+      $toolbar.find('[data-reader-width]').bind('click', function(e) {
+        e.stopPropagation();
+        var nextIdx = (widthOrder.indexOf(prefs.width) + 1) % widthOrder.length;
+        prefs.width = widthOrder[nextIdx];
+        applyReaderPrefs(true);
+        syncToolbarUI();
+      });
+      $toolbar.find('[data-reader-focus]').bind('click', function(e) {
+        e.stopPropagation();
+        prefs.focus = !document.documentElement.classList.contains('reader-focus-mode');
+        applyReaderPrefs(false);
+        syncToolbarUI();
+      });
+
+      $('body').append($toolbar);
+
+      // 顶栏毛玻璃章节标题吸顶替换：滑过章节标题后隐藏顶部导航，把当前章节标题丝滑缩小固定在顶栏
+      var navMain = document.getElementById('main-nav');
+      var secTitleEl = document.getElementById('nav-section-title');
+      if (navMain && !secTitleEl) {
+        secTitleEl = document.createElement('div');
+        secTitleEl.id = 'nav-section-title';
+        secTitleEl.className = 'nav-section-title';
+        secTitleEl.title = '点击回到本节开头';
+        secTitleEl.addEventListener('click', function() {
+          var targetId = secTitleEl.getAttribute('data-target-id');
+          var el = targetId ? document.getElementById(targetId) : null;
+          if (el) {
+            $('html, body').stop().animate({ scrollTop: Math.max(0, $(el).offset().top - 56) }, 280);
+          }
+        });
+        navMain.appendChild(secTitleEl);
       }
 
-      $figs.each(function() {
-        var fig = this;
-        var $fig = $(fig);
-        var $nextP = $fig.next('p');
-        if (!$nextP.length) return;
+      function updateStickySectionHeader() {
+        var navOuter = document.getElementById('nav-outer');
+        var titleBox = document.getElementById('nav-section-title');
+        if (!navOuter || !titleBox) return;
+        var isPost = $('.article-entry').length && !$('#content').hasClass('is-home') && !$('.archives-wrap').length && !$('#ask-page').length && !$('.article-type-about').length;
+        if (!isPost) {
+          navOuter.classList.remove('has-active-section', 'is-scrolled-fade');
+          return;
+        }
+        var entryEl = document.querySelector('.article-entry');
+        if (entryEl) {
+          var toggleEl = document.getElementById('main-nav-toggle');
+          var minLeft = 52;
+          if (toggleEl) {
+            var tRect = toggleEl.getBoundingClientRect();
+            if (tRect.width > 0) minLeft = Math.round(tRect.right + 12);
+          }
+          var entryLeft = Math.round(entryEl.getBoundingClientRect().left);
+          titleBox.style.left = Math.max(minLeft, entryLeft) + 'px';
+        }
+        var headings = document.querySelectorAll('.article-entry h1, .article-entry h2, .article-entry h3');
+        var activeH = null;
+        for (var i = 0; i < headings.length; i++) {
+          var rect = headings[i].getBoundingClientRect();
+          if (rect.top <= 66) {
+            activeH = headings[i];
+          } else {
+            break;
+          }
+        }
+        if (activeH) {
+          var clone = activeH.cloneNode(true);
+          var numSpan = clone.querySelector('.heading-sec-num');
+          if (numSpan) numSpan.remove();
+          var cleanText = (clone.textContent || '').trim();
+          if (titleBox.textContent !== cleanText) {
+            titleBox.textContent = cleanText;
+            titleBox.setAttribute('data-target-id', activeH.id || '');
+          }
+          navOuter.classList.add('has-active-section');
+        } else {
+          navOuter.classList.remove('has-active-section');
+        }
+      }
+      updateStickySectionHeader();
+      window.__updateStickySectionHeader = updateStickySectionHeader;
 
-        var img = fig.querySelector('img');
-        if (img && !img.complete) {
-          img.addEventListener('load', layoutProseFigures, { once: true });
+      if (!window.__articleNavScrollFadeBound) {
+        window.__articleNavScrollFadeBound = true;
+        window.addEventListener('scroll', function() {
+          if (window.__updateStickySectionHeader) window.__updateStickySectionHeader();
+        }, { passive: true });
+        window.addEventListener('resize', function() {
+          if (window.__updateStickySectionHeader) window.__updateStickySectionHeader();
+        });
+      }
+
+      if (!window.__readerToolbarGlobalBound) {
+        window.__readerToolbarGlobalBound = true;
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape' && document.documentElement.classList.contains('reader-focus-mode')) {
+            var p = {};
+            try { p = JSON.parse(localStorage.getItem('heptazero_reader_prefs') || '{}'); } catch (err) {}
+            p.focus = false;
+            try { localStorage.setItem('heptazero_reader_prefs', JSON.stringify(p)); } catch (err) {}
+            document.documentElement.classList.remove('reader-focus-mode');
+            $('[data-reader-focus]').removeClass('is-active');
+            if (window.__layoutSidenotes) window.__layoutSidenotes();
+          }
+        });
+      }
+    } else {
+      $('html').removeClass('reader-focus-mode reader-width-narrow reader-width-wide');
+      $('#nav-outer').removeClass('is-scrolled-fade has-active-section');
+    }
+
+    // 6.8 文章页评论区右侧留白：准周期机械连杆画笔 + 首页大标题傅里叶轮廓描摹
+    $('.epicycle-pen-wrap, .fourier-title-canvas').remove();
+    $('#header-title #logo').removeClass('fourier-hidden').css('display', '');
+    if (window.__epicycleRafId) {
+      cancelAnimationFrame(window.__epicycleRafId);
+      window.__epicycleRafId = null;
+    }
+    if (window.__fourierTitleRafId) {
+      cancelAnimationFrame(window.__fourierTitleRafId);
+      window.__fourierTitleRafId = null;
+    }
+
+    // 6.8a 首页大标题 "Heptazero" 复数傅里叶级数轮廓一笔描摹
+    if (isHome) {
+      var $logo = $('#header-title #logo');
+      var titleText = ($logo.text() || 'Heptazero').trim();
+      var $fCanvas = $('<canvas class="fourier-title-canvas" title="点击重绘傅里叶标题轮廓 / 双击显隐本轮连杆"></canvas>');
+      $logo.addClass('fourier-hidden').css('display', 'none').after($fCanvas);
+      var fCanvas = $fCanvas[0];
+
+      function startFourierTitle() {
+        if (!fCanvas || !fCanvas.getContext || !document.body.contains(fCanvas)) return;
+        var ctx = fCanvas.getContext('2d');
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        var W = 420, H = 130;
+        fCanvas.width = W * dpr;
+        fCanvas.height = H * dpr;
+        ctx.scale(dpr, dpr);
+
+        // 1. 离屏渲染标题字体并提取边缘像素点
+        var off = document.createElement('canvas');
+        off.width = W;
+        off.height = H;
+        var octx = off.getContext('2d');
+        octx.font = '700 44px "Noto Serif SC", Georgia, serif';
+        octx.textAlign = 'center';
+        octx.textBaseline = 'middle';
+        octx.fillStyle = '#000';
+        octx.fillText(titleText, W / 2, H / 2);
+
+        var img = octx.getImageData(0, 0, W, H).data;
+        function isSolid(px, py) {
+          if (px < 0 || px >= W || py < 0 || py >= H) return false;
+          return img[(py * W + px) * 4 + 3] > 128;
+        }
+        var edgePts = [];
+        for (var x = 1; x < W - 1; x++) {
+          for (var y = 1; y < H - 1; y++) {
+            if (isSolid(x, y) && (!isSolid(x - 1, y) || !isSolid(x + 1, y) || !isSolid(x, y - 1) || !isSolid(x, y + 1))) {
+              edgePts.push({ x: x, y: y, used: false });
+            }
+          }
+        }
+        if (edgePts.length < 40) {
+          $logo.removeClass('fourier-hidden').css('display', '');
+          $fCanvas.remove();
           return;
         }
 
-        // 在 150px ~ 300px 之间二分微调宽度，使图文在段落末尾尽量齐平
-        var low = 150, high = 300;
-        var bestW = 240;
-        var bestDiff = Infinity;
-        for (var step = 0; step < 7; step++) {
-          var mid = Math.round((low + high) / 2);
-          fig.style.width = mid + 'px';
-          fig.style.maxWidth = mid + 'px';
-          var figH = fig.offsetHeight;
-          var pH = $nextP[0].offsetHeight;
-          var diff = Math.abs(figH - pH);
-          if (diff < bestDiff) {
-            bestDiff = diff;
-            bestW = mid;
+        // 2. 从左到右最近邻贪心串联成一条连续闭合路径
+        var ordered = [];
+        var cur = edgePts[0];
+        cur.used = true;
+        ordered.push({ x: cur.x, y: cur.y });
+        for (var step = 1; step < edgePts.length; step++) {
+          var bestIdx = -1;
+          var bestCost = Infinity;
+          for (var j = 0; j < edgePts.length; j++) {
+            var p = edgePts[j];
+            if (p.used) continue;
+            var dx = p.x - cur.x;
+            var dy = p.y - cur.y;
+            var d2 = dx * dx + dy * dy;
+            // 同字母内部优先紧邻，跨字母跳跃倾向于向右推进
+            var cost = d2 > 25 ? d2 * 1.4 + Math.max(0, -dx) * 40 : d2;
+            if (cost < bestCost) {
+              bestCost = cost;
+              bestIdx = j;
+            }
           }
-          if (figH > pH) {
-            high = mid - 1;
+          if (bestIdx === -1) break;
+          cur = edgePts[bestIdx];
+          cur.used = true;
+          ordered.push({ x: cur.x, y: cur.y });
+        }
+
+        // 3. 对相邻像素点做 3 轮拉普拉斯平滑，消除整数像素锯齿阶梯感
+        for (var pass = 0; pass < 3; pass++) {
+          var smoothed = [ordered[0]];
+          for (var sIdx = 1; sIdx < ordered.length - 1; sIdx++) {
+            var prevP = ordered[sIdx - 1], curP = ordered[sIdx], nextP = ordered[sIdx + 1];
+            var dPrev = Math.hypot(curP.x - prevP.x, curP.y - prevP.y);
+            var dNext = Math.hypot(nextP.x - curP.x, nextP.y - curP.y);
+            if (dPrev < 6 && dNext < 6) {
+              smoothed.push({
+                x: 0.25 * prevP.x + 0.5 * curP.x + 0.25 * nextP.x,
+                y: 0.25 * prevP.y + 0.5 * curP.y + 0.25 * nextP.y
+              });
+            } else {
+              smoothed.push(curP);
+            }
+          }
+          smoothed.push(ordered[ordered.length - 1]);
+          ordered = smoothed;
+        }
+
+        // 4. 均匀重采样 N 个复平面采样点 z_k = (x - W/2) + i (y - H/2)
+        var N = Math.min(560, ordered.length);
+        var samples = [];
+        for (var k = 0; k < N; k++) {
+          var pt = ordered[Math.floor((k * ordered.length) / N)];
+          samples.push({ re: pt.x - W / 2, im: pt.y - H / 2 });
+        }
+
+        // 5. 计算复数离散傅里叶变换 (Complex DFT)
+        var M = Math.min(150, Math.floor((N - 1) / 2));
+        var epicycles = [];
+        for (var freq = -M; freq <= M; freq++) {
+          var sumRe = 0, sumIm = 0;
+          for (var n = 0; n < N; n++) {
+            var theta = (-2 * Math.PI * freq * n) / N;
+            var c = Math.cos(theta), s = Math.sin(theta);
+            sumRe += samples[n].re * c - samples[n].im * s;
+            sumIm += samples[n].re * s + samples[n].im * c;
+          }
+          sumRe /= N;
+          sumIm /= N;
+          epicycles.push({
+            freq: freq,
+            amp: Math.hypot(sumRe, sumIm),
+            phase: Math.atan2(sumIm, sumRe)
+          });
+        }
+        // 按振幅从大到小排序（DC 分量 freq=0 置顶）
+        epicycles.sort(function(a, b) {
+          if (a.freq === 0) return -1;
+          if (b.freq === 0) return 1;
+          return b.amp - a.amp;
+        });
+
+        var cycleSteps = 1350;
+        var maxPathLen = Math.floor(cycleSteps * 0.94);
+        var path = [];
+        var t = 0;
+        var dt = (2 * Math.PI) / cycleSteps;
+        var showGears = true;
+
+        var fClickTimer = null;
+        fCanvas.onclick = function() {
+          if (fClickTimer) {
+            clearTimeout(fClickTimer);
+            fClickTimer = null;
+            showGears = !showGears;
           } else {
-            low = mid + 1;
+            fClickTimer = setTimeout(function() {
+              fClickTimer = null;
+              path.length = 0;
+              t = 0;
+            }, 220);
+          }
+        };
+
+        function renderFourierFrame() {
+          if (!document.body.contains(fCanvas)) {
+            window.__fourierTitleRafId = null;
+            return;
+          }
+          if (!document.hidden) {
+            ctx.clearRect(0, 0, W, H);
+            var isDark = document.documentElement.classList.contains('dark-mode');
+            var inkRGB = isDark ? '255, 45, 117' : '0, 133, 161';
+            var inkColor = isDark ? '#ff2d75' : '#0085a1';
+            var ghostColor = isDark ? 'rgba(248, 250, 252, 0.08)' : 'rgba(15, 23, 42, 0.07)';
+            var orbitColor = isDark ? 'rgba(148, 163, 184, 0.16)' : 'rgba(148, 163, 184, 0.24)';
+            var rodColor = isDark ? 'rgba(255, 45, 117, 0.45)' : 'rgba(0, 133, 161, 0.42)';
+
+            // 底层极淡字模底稿
+            ctx.font = '700 44px "Noto Serif SC", Georgia, serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = ghostColor;
+            ctx.fillText(titleText, W / 2, H / 2);
+
+            // 每帧只推进 1 个精细采样步（1350 步/圈，约 22 秒从容循环一圈，永不间断）
+            var x = W / 2, y = H / 2;
+            var joints = [{ x: x, y: y }];
+            for (var i = 0; i < epicycles.length; i++) {
+              var ep = epicycles[i];
+              var prevX = x, prevY = y;
+              var ang = ep.freq * t + ep.phase;
+              x += ep.amp * Math.cos(ang);
+              y += ep.amp * Math.sin(ang);
+              if (i < 28 && ep.amp > 0.6) {
+                joints.push({ px: prevX, py: prevY, x: x, y: y, r: ep.amp });
+              }
+            }
+
+            path.push({ x: x, y: y });
+            if (path.length > maxPathLen) {
+              path.shift();
+            }
+            t = (t + dt) % (Math.PI * 2);
+
+            // 绘制循环渐隐的标题轮廓（尾部柔和淡出，笔尖处最清晰，跨字母跳步自动飞白，句末回跳自动抬笔）
+            if (path.length > 1) {
+              for (var pIdx = 1; pIdx < path.length; pIdx++) {
+                var p0 = path[pIdx - 1], p1 = path[pIdx];
+                var jumpDist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+                if (jumpDist > 42) continue;
+                var fade = Math.pow(pIdx / path.length, 0.65);
+                ctx.beginPath();
+                ctx.moveTo(p0.x, p0.y);
+                ctx.lineTo(p1.x, p1.y);
+                if (jumpDist > 7) {
+                  ctx.strokeStyle = 'rgba(' + inkRGB + ', ' + (0.13 * fade).toFixed(3) + ')';
+                  ctx.lineWidth = 0.7;
+                } else {
+                  ctx.strokeStyle = 'rgba(' + inkRGB + ', ' + (0.94 * fade).toFixed(3) + ')';
+                  ctx.lineWidth = 1.55;
+                }
+                ctx.lineCap = 'round';
+                ctx.stroke();
+              }
+            }
+
+            // 常驻绘制前 28 阶本轮圆环与连杆，首尾循环不断
+            if (showGears) {
+              for (var g = 1; g < joints.length; g++) {
+                var jt = joints[g];
+                ctx.beginPath();
+                ctx.arc(jt.px, jt.py, jt.r, 0, Math.PI * 2);
+                ctx.strokeStyle = orbitColor;
+                ctx.lineWidth = 0.8;
+                ctx.stroke();
+              }
+              ctx.beginPath();
+              ctx.moveTo(W / 2, H / 2);
+              for (var rIdx = 1; rIdx < joints.length; rIdx++) {
+                ctx.lineTo(joints[rIdx].x, joints[rIdx].y);
+              }
+              ctx.lineTo(x, y);
+              ctx.strokeStyle = rodColor;
+              ctx.lineWidth = 1.1;
+              ctx.stroke();
+
+              ctx.beginPath();
+              ctx.arc(x, y, 2.8, 0, Math.PI * 2);
+              ctx.fillStyle = inkColor;
+              ctx.fill();
+            }
+          }
+          window.__fourierTitleRafId = requestAnimationFrame(renderFourierFrame);
+        }
+        window.__fourierTitleRafId = requestAnimationFrame(renderFourierFrame);
+      }
+
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(startFourierTitle);
+      } else {
+        setTimeout(startFourierTitle, 150);
+      }
+    }
+    var $commentsSection = $('#comments');
+    if (isPostPage && $commentsSection.length) {
+      var $penWrap = $('<div class="epicycle-pen-wrap"><canvas class="epicycle-pen-canvas" title="点击换一组随机初值 / 双击显隐连杆"></canvas></div>');
+      $commentsSection.append($penWrap);
+      var canvas = $penWrap.find('canvas')[0];
+      if (canvas && canvas.getContext) {
+        var ctx = canvas.getContext('2d');
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        var size = 200;
+        canvas.width = size * dpr;
+        canvas.height = size * dpr;
+        ctx.scale(dpr, dpr);
+
+        var arms = [
+          { r: 36, w: 1.0, p: 0 },
+          { r: 24, w: -Math.SQRT2, p: 0 },
+          { r: 15, w: Math.PI - 1, p: 0 },
+          { r: 9,  w: -2.3 * ((Math.sqrt(5) - 1) / 2), p: 0 }
+        ];
+        var trail = [];
+        var maxTrail = 600;
+        var showRods = true;
+        var t = 0;
+
+        function computeJoints(timeVal) {
+          var x = size / 2, y = size / 2;
+          var joints = [{ x: x, y: y }];
+          for (var i = 0; i < arms.length; i++) {
+            var a = arms[i];
+            var ang = a.w * timeVal + a.p;
+            x += a.r * Math.cos(ang);
+            y += a.r * Math.sin(ang);
+            joints.push({ x: x, y: y, r: a.r });
+          }
+          return joints;
+        }
+
+        function randomizePhases() {
+          for (var i = 0; i < arms.length; i++) {
+            arms[i].p = Math.random() * Math.PI * 2;
+          }
+          trail.length = 0;
+          t = 0;
+          // 预热一段初始墨迹，避免刚滚到底部时一片空白
+          for (var wStep = 0; wStep < 180; wStep++) {
+            var jts = computeJoints(t);
+            var tip = jts[jts.length - 1];
+            trail.push({ x: tip.x, y: tip.y });
+            t += 0.022;
           }
         }
-        fig.style.width = bestW + 'px';
-        fig.style.maxWidth = bestW + 'px';
-      });
-      layoutSidenotes();
-    }
-    layoutProseFigures();
-    if (!window.__proseFigureLayoutBound) {
-      window.__proseFigureLayoutBound = true;
-      window.addEventListener('load', layoutProseFigures);
-      window.addEventListener('resize', layoutProseFigures);
+        randomizePhases();
+
+        var clickTimer = null;
+        canvas.addEventListener('click', function() {
+          if (clickTimer) {
+            clearTimeout(clickTimer);
+            clickTimer = null;
+            showRods = !showRods;
+          } else {
+            clickTimer = setTimeout(function() {
+              clickTimer = null;
+              randomizePhases();
+            }, 220);
+          }
+        });
+
+        function stepEpicycle() {
+          if (!document.body.contains(canvas)) {
+            window.__epicycleRafId = null;
+            return;
+          }
+          if (!document.hidden && window.innerWidth > 1100) {
+            // 每帧推进 2 个微步，速度加快约 2.5 倍且曲线依然平滑圆润
+            var joints = null;
+            for (var s = 0; s < 2; s++) {
+              joints = computeJoints(t);
+              var tip = joints[joints.length - 1];
+              trail.push({ x: tip.x, y: tip.y });
+              if (trail.length > maxTrail) trail.shift();
+              t += 0.021;
+            }
+
+            ctx.clearRect(0, 0, size, size);
+            var isDark = document.documentElement.classList.contains('dark-mode');
+            var inkRGB = isDark ? '255, 45, 117' : '0, 133, 161';
+            var orbitStroke = isDark ? 'rgba(148, 163, 184, 0.14)' : 'rgba(148, 163, 184, 0.22)';
+            var rodStroke = isDark ? 'rgba(148, 163, 184, 0.5)' : 'rgba(100, 116, 139, 0.52)';
+
+            if (showRods) {
+              for (var i = 0; i < arms.length; i++) {
+                ctx.beginPath();
+                ctx.arc(joints[i].x, joints[i].y, arms[i].r, 0, Math.PI * 2);
+                ctx.strokeStyle = orbitStroke;
+                ctx.lineWidth = 0.9;
+                ctx.stroke();
+              }
+            }
+
+            // 渐隐墨迹轨迹
+            if (trail.length > 2) {
+              for (var k = 1; k < trail.length; k++) {
+                var alpha = Math.pow(k / trail.length, 1.6) * 0.86;
+                ctx.beginPath();
+                ctx.moveTo(trail[k - 1].x, trail[k - 1].y);
+                ctx.lineTo(trail[k].x, trail[k].y);
+                ctx.strokeStyle = 'rgba(' + inkRGB + ', ' + alpha.toFixed(3) + ')';
+                ctx.lineWidth = 1.45;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+              }
+            }
+
+            // 机械连杆与笔尖
+            if (showRods) {
+              ctx.beginPath();
+              ctx.moveTo(joints[0].x, joints[0].y);
+              for (var j = 1; j < joints.length; j++) {
+                ctx.lineTo(joints[j].x, joints[j].y);
+              }
+              ctx.strokeStyle = rodStroke;
+              ctx.lineWidth = 1.25;
+              ctx.lineJoin = 'round';
+              ctx.stroke();
+            }
+
+            var lastTip = joints[joints.length - 1];
+            ctx.beginPath();
+            ctx.arc(lastTip.x, lastTip.y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgb(' + inkRGB + ')';
+            ctx.fill();
+          }
+          window.__epicycleRafId = requestAnimationFrame(stepEpicycle);
+        }
+        window.__epicycleRafId = requestAnimationFrame(stepEpicycle);
+      }
     }
 
     // 7. 边注与末尾脚注双向平滑跳转定位与闪烁高亮（严禁触发 PJAX 整页刷新或滚回顶部）
@@ -549,9 +1144,11 @@
     setTimeout(updateScrollSpy, 50);
 
     // 渲染全站全局复用的侧边抽屉与顶栏活动状态
+    initNavToggleBars();
     renderGlobalMobileNav();
     renderGlobalSubNav();
     updateNavActiveState();
+    layoutPriorityNav();
   }
 
   // -------------------------------------------------------------
@@ -581,10 +1178,52 @@
     syncGiscusTheme(theme);
   }
 
-  function toggleTheme() {
+  function toggleTheme(e) {
     var current = document.documentElement.classList.contains('dark-mode') ? 'dark' : 'light';
     var next = (current === 'dark') ? 'light' : 'dark';
-    applyTheme(next, true);
+
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!document.startViewTransition || reduceMotion) {
+      applyTheme(next, true);
+      return;
+    }
+
+    var x = (e && typeof e.clientX === 'number' && e.clientX > 0) ? e.clientX : window.innerWidth - 40;
+    var y = (e && typeof e.clientY === 'number' && e.clientY > 0) ? e.clientY : 30;
+    var endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    var transition = document.startViewTransition(function() {
+      applyTheme(next, true);
+    });
+    transition.ready.then(function() {
+      document.documentElement.animate(
+        [
+          { clipPath: 'circle(0px at ' + x + 'px ' + y + 'px)', filter: 'blur(10px)', offset: 0 },
+          { clipPath: 'circle(' + Math.round(endRadius * 0.38) + 'px at ' + x + 'px ' + y + 'px)', filter: 'blur(8px)', offset: 0.42 },
+          { clipPath: 'circle(' + Math.round(endRadius * 0.82) + 'px at ' + x + 'px ' + y + 'px)', filter: 'blur(3px)', offset: 0.78 },
+          { clipPath: 'circle(' + endRadius + 'px at ' + x + 'px ' + y + 'px)', filter: 'blur(0px)', offset: 1 }
+        ],
+        {
+          duration: 920,
+          easing: 'cubic-bezier(0.76, 0, 0.24, 1)',
+          pseudoElement: '::view-transition-new(root)'
+        }
+      );
+      document.documentElement.animate(
+        [
+          { filter: 'blur(0px)', opacity: 1 },
+          { filter: 'blur(4px)', opacity: 0.92 }
+        ],
+        {
+          duration: 920,
+          easing: 'cubic-bezier(0.76, 0, 0.24, 1)',
+          pseudoElement: '::view-transition-old(root)'
+        }
+      );
+    });
   }
 
   function syncGiscusTheme(theme) {
@@ -638,23 +1277,12 @@
   }
 
   // -------------------------------------------------------------
-  // 顶栏右侧辅助操作区组件（单点维护，支持深色切换、双语与联系展开）
+  // 顶栏右侧辅助操作区（联系方式、语言、深色模式统一收纳进侧边栏底部，顶栏保持极简）
   // -------------------------------------------------------------
   function renderGlobalSubNav() {
     var $subNav = $('#sub-nav');
     if (!$subNav.length) return;
-
-    var globeSvg = '<svg class="lang-icon-globe" viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>';
-    var sunMoonSvg = '<svg class="theme-icon-sun" viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg><svg class="theme-icon-moon" viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
-
-    var html = '<div class="sub-nav-social">' +
-      '  <a id="nav-github-link" class="nav-icon" href="https://github.com/HeptaZero" target="_blank" rel="noopener" title="GitHub"></a>' +
-      '  <a id="nav-mail-link" class="nav-icon" href="mailto:1004752777@qq.com" title="Email"></a>' +
-      '</div>' +
-      '<button class="nav-btn lang-toggle-btn" title="切换语言 / Switch Language" type="button" aria-label="Toggle language">' + globeSvg + '</button>' +
-      '<button class="nav-btn theme-toggle-btn" title="切换深色/浅色模式 / Toggle Dark Mode" type="button" aria-label="Toggle theme">' + sunMoonSvg + '</button>';
-
-    $subNav.html(html);
+    $subNav.find('.sub-nav-social, .lang-toggle-btn, .theme-toggle-btn').remove();
   }
 
   // -------------------------------------------------------------
@@ -722,10 +1350,12 @@
             '</a>' +
             '</li>';
         });
+        var groupHref = group.href || '/tags/personal.html';
+        var chevronSvg = '<svg viewBox="0 0 12 12" width="11" height="11" stroke="currentColor" stroke-width="1.65" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="2.5 4.2 6 7.8 9.5 4.2"></polyline></svg>';
         treeGroupsHtml += '<li class="category-list-item tag-tree-open">' +
           '<div class="category-item-row tag-tree-toggle" role="button">' +
-          '  <span class="tag-tree-arrow">▾</span>' +
-          '  <span class="category-list-name">' + group.name + '</span>' +
+          '  <span class="tag-tree-arrow">' + chevronSvg + '</span>' +
+          '  <a class="category-group-link category-list-name" href="' + groupHref + '">' + group.name + '</a>' +
           '  <span class="category-list-count">' + group.count + '</span>' +
           '</div>' +
           '<ul class="category-list-child">' + leavesHtml + '</ul>' +
@@ -793,6 +1423,132 @@
     document.body.appendChild(dimEl);
   }
 
+  function initNavToggleBars() {
+    var toggle = document.getElementById('main-nav-toggle');
+    if (toggle && !toggle.classList.contains('has-bars')) {
+      toggle.classList.add('has-bars');
+      toggle.innerHTML = '<span class="nav-toggle-bar"></span><span class="nav-toggle-bar"></span><span class="nav-toggle-bar"></span>';
+    }
+  }
+
+  // 渐进式优先级导航：按 Log -> Ask -> About -> Archives 顺序逐个折叠，不重叠
+  function layoutPriorityNav() {
+    var nav = document.getElementById('main-nav');
+    var linksWrap = document.querySelector('.main-nav-links');
+    var subNav = document.getElementById('sub-nav');
+    if (!nav || !linksWrap || !subNav) return;
+
+    var social = subNav.querySelector('.sub-nav-social');
+    var allLinks = Array.prototype.slice.call(linksWrap.querySelectorAll('.main-nav-link'));
+    if (social) social.classList.remove('nav-is-folded');
+    allLinks.forEach(function(el) { el.classList.remove('nav-is-folded'); });
+
+    function hasCollision() {
+      var toggle = document.getElementById('main-nav-toggle');
+      var toolbar = document.querySelector('.reader-toolbar');
+      var leftEdge = 20;
+      if (toggle) {
+        var tRect = toggle.getBoundingClientRect();
+        if (tRect.width > 0) {
+          leftEdge = Math.max(leftEdge, tRect.right);
+        }
+      }
+      var rightEdge = window.innerWidth - 20;
+      if (toolbar) {
+        var tbRect = toolbar.getBoundingClientRect();
+        if (tbRect.width > 0) {
+          rightEdge = Math.min(rightEdge, tbRect.left);
+        }
+      } else if (subNav && subNav.children.length > 0) {
+        var sRect = subNav.getBoundingClientRect();
+        if (sRect.width > 0) {
+          rightEdge = Math.min(rightEdge, sRect.left);
+        }
+      }
+      var lRect = linksWrap.getBoundingClientRect();
+      return (lRect.left < leftEdge + 16) || (lRect.right > rightEdge - 16);
+    }
+
+    if (hasCollision() && social) {
+      social.classList.add('nav-is-folded');
+    }
+
+    // 折叠优先级：Log -> Ask -> About -> Archives -> Home（当前所在页面最后保留）
+    var foldOrder = ['/log.html', '/ask.html', '/about.html', '/archives.html', '/index.html'];
+    for (var pass = 0; pass < 2 && hasCollision(); pass++) {
+      for (var i = 0; i < foldOrder.length && hasCollision(); i++) {
+        var href = foldOrder[i];
+        for (var j = 0; j < allLinks.length; j++) {
+          var a = allLinks[j];
+          if (a.classList.contains('nav-is-folded')) continue;
+          if (pass === 0 && a.classList.contains('current')) continue;
+          if ((a.getAttribute('href') || '').indexOf(href) !== -1) {
+            a.classList.add('nav-is-folded');
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  function renderNavDropdown() {
+    var dd = document.getElementById('nav-dropdown');
+    if (!dd) {
+      dd = document.createElement('div');
+      dd.id = 'nav-dropdown';
+      dd.className = 'nav-dropdown';
+      document.body.appendChild(dd);
+    }
+    var siteData = window.SITE_DATA || { github: 'https://github.com/HeptaZero', email: '1004752777@qq.com' };
+
+    var foldedLinks = [];
+    var allLinks = [];
+    $('.main-nav-links .main-nav-link').each(function() {
+      var $a = $(this);
+      var item = { href: $a.attr('href'), text: $a.text(), current: $a.hasClass('current') };
+      allLinks.push(item);
+      if ($a.hasClass('nav-is-folded')) {
+        foldedLinks.push(item);
+      }
+    });
+    var navHasActiveSection = $('#nav-outer').hasClass('has-active-section');
+    var listToRender = (foldedLinks.length && !navHasActiveSection) ? foldedLinks : allLinks;
+
+    var navHtml = '<div class="nav-dropdown-links">';
+    $.each(listToRender, function(_, item) {
+      var cls = item.current ? 'nav-dropdown-link current' : 'nav-dropdown-link';
+      navHtml += '<a class="' + cls + '" href="' + item.href + '">' + item.text + '</a>';
+    });
+    var drawerLabel = currentArticleTocHtml ? '文章大纲' : '标签树';
+    navHtml += '<button type="button" class="nav-dropdown-link nav-dropdown-drawer-btn" style="width:100%;text-align:left;background:none;border:0;border-top:1px solid rgba(0,0,0,0.06);cursor:pointer;font-family:inherit;">' + drawerLabel + '</button>';
+    navHtml += '</div>';
+
+    dd.innerHTML = navHtml;
+
+    // 锚定到三横按钮正下方
+    var toggle = document.getElementById('main-nav-toggle');
+    if (toggle) {
+      var rect = toggle.getBoundingClientRect();
+      dd.style.top = Math.round(rect.bottom + 8) + 'px';
+      if (rect.left > window.innerWidth / 2) {
+        dd.style.left = 'auto';
+        dd.style.right = Math.max(14, Math.round(window.innerWidth - rect.right)) + 'px';
+        dd.style.transformOrigin = 'top right';
+      } else {
+        dd.style.right = 'auto';
+        dd.style.left = Math.max(14, Math.round(rect.left)) + 'px';
+        dd.style.transformOrigin = 'top left';
+      }
+    }
+  }
+
+  initNavToggleBars();
+  layoutPriorityNav();
+  if (!window.__priorityNavBound) {
+    window.__priorityNavBound = true;
+    window.addEventListener('resize', layoutPriorityNav);
+  }
+
   document.addEventListener('click', function(e) {
     var target = e.target;
 
@@ -800,7 +1556,7 @@
     var themeBtn = target.closest ? target.closest('.theme-toggle-btn') : null;
     if (themeBtn) {
       e.preventDefault();
-      toggleTheme();
+      toggleTheme(e);
       return;
     }
 
@@ -812,12 +1568,52 @@
       return;
     }
 
+    var ddEl = document.getElementById('nav-dropdown');
+    if (ddEl && ddEl.classList.contains('is-open')) {
+      var inDd = target.closest ? target.closest('#nav-dropdown') : null;
+      var ddLink = target.closest ? target.closest('#nav-dropdown a') : null;
+      var isToggle = target.closest ? target.closest('#main-nav-toggle') : null;
+      if ((!inDd && !isToggle) || ddLink) {
+        ddEl.classList.remove('is-open');
+        $('#main-nav-toggle').removeClass('is-open');
+      }
+    }
+
+    var drawerTrigger = target.closest ? target.closest('.nav-dropdown-drawer-btn') : null;
+    if (drawerTrigger) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (ddEl) ddEl.classList.remove('is-open');
+      $container.addClass('mobile-nav-on');
+      $('#main-nav-toggle').addClass('is-open');
+      return;
+    }
+
     var toggleBtn = target.closest ? target.closest('#main-nav-toggle') : null;
     if (toggleBtn) {
       e.preventDefault();
+      if ($container.hasClass('mobile-nav-on')) {
+        $container.removeClass('mobile-nav-on');
+        toggleBtn.classList.remove('is-open');
+        return;
+      }
+      if ($('.nav-is-folded').length) {
+        renderNavDropdown();
+        var dd = document.getElementById('nav-dropdown');
+        if (dd) {
+          var willOpen = !dd.classList.contains('is-open');
+          dd.classList.toggle('is-open', willOpen);
+          if (willOpen) toggleBtn.classList.add('is-open');
+          else toggleBtn.classList.remove('is-open');
+        }
+        return;
+      }
       if (isMobileNavAnim) return;
       startMobileNavAnim();
-      $container.toggleClass('mobile-nav-on');
+      var openSide = !$container.hasClass('mobile-nav-on');
+      $container.toggleClass('mobile-nav-on', openSide);
+      if (openSide) toggleBtn.classList.add('is-open');
+      else toggleBtn.classList.remove('is-open');
       stopMobileNavAnim();
       return;
     }
@@ -827,6 +1623,7 @@
       if (isMobileNavAnim) return;
       startMobileNavAnim();
       $container.removeClass('mobile-nav-on');
+      $('#main-nav-toggle').removeClass('is-open');
       stopMobileNavAnim();
       return;
     }
@@ -835,6 +1632,7 @@
     if (tocLink) {
       var href = tocLink.getAttribute('href');
       $container.removeClass('mobile-nav-on');
+      $('#main-nav-toggle').removeClass('is-open');
       if (href && href.charAt(0) === '#') {
         e.preventDefault();
         var rawId = href.substring(1);
@@ -860,8 +1658,9 @@
       return;
     }
 
+    var tagGroupLink = target.closest ? target.closest('.category-group-link') : null;
     var tagToggle = target.closest ? target.closest('.tag-tree-toggle') : null;
-    if (tagToggle) {
+    if (tagToggle && !tagGroupLink) {
       var item = tagToggle.closest('.category-list-item');
       if (item) item.classList.toggle('tag-tree-open');
       return;
@@ -870,50 +1669,21 @@
     var mobileNavLink = target.closest ? target.closest('#mobile-nav a') : null;
     if (mobileNavLink) {
       $container.removeClass('mobile-nav-on');
+      var tBtn = document.getElementById('main-nav-toggle');
+      if (tBtn) tBtn.classList.remove('is-open');
     }
 
     if ($container.hasClass('mobile-nav-on')) {
       var inMobileNav = target.closest ? target.closest('#mobile-nav') : null;
       if (!inMobileNav) {
         $container.removeClass('mobile-nav-on');
+        var tBtn2 = document.getElementById('main-nav-toggle');
+        if (tBtn2) tBtn2.classList.remove('is-open');
       }
     }
   });
 
-  // PC 端鼠标悬停左上角菜单与浮窗卡片交互 (纯原生事件监听，0 依赖，丝滑展开与延时防抖关闭)
-  var navHoverTimer = null;
-  function isDesktopScreen() {
-    return window.innerWidth >= 811;
-  }
-
-  document.addEventListener('mouseover', function(e) {
-    if (!isDesktopScreen()) return;
-    var target = e.target;
-    var toggleBtn = target && target.closest ? target.closest('#main-nav-toggle') : null;
-    var mobileNav = target && target.closest ? target.closest('#mobile-nav') : null;
-    if (toggleBtn || mobileNav) {
-      if (navHoverTimer) {
-        clearTimeout(navHoverTimer);
-        navHoverTimer = null;
-      }
-      if (!$container.hasClass('mobile-nav-on')) {
-        $container.addClass('mobile-nav-on');
-      }
-    }
-  });
-
-  document.addEventListener('mouseout', function(e) {
-    if (!isDesktopScreen()) return;
-    var related = e.relatedTarget;
-    var inToggle = related && related.closest ? related.closest('#main-nav-toggle') : null;
-    var inNav = related && related.closest ? related.closest('#mobile-nav') : null;
-    if (!inToggle && !inNav) {
-      if (navHoverTimer) clearTimeout(navHoverTimer);
-      navHoverTimer = setTimeout(function() {
-        $container.removeClass('mobile-nav-on');
-      }, 180);
-    }
-  });
+  // 全屏灯箱交互
 
   // 纯原生高性能无依赖全屏灯箱（彻底杜绝移动端将图片链接误当成文件下载的弹窗行为）
   document.addEventListener('click', function(e) {
@@ -1096,6 +1866,10 @@
             oldContent.className = newContent.className;
           }
           $container.removeClass('mobile-nav-on');
+          var tBtnReset = document.getElementById('main-nav-toggle');
+          if (tBtnReset) tBtnReset.classList.remove('is-open');
+          var ddReset = document.getElementById('nav-dropdown');
+          if (ddReset) ddReset.classList.remove('is-open');
 
           // 4. 原地同步大纲容器（仅当新页面为文章页且含有标题时才显示；About、Ask 与 Home 均不大纲化）
           var isAboutPage = url.indexOf('about.html') !== -1 || !!newDoc.querySelector('.article-type-about');
@@ -1119,17 +1893,8 @@
             oldFloatingToc.style.display = 'none';
           }
 
-          // 5. 更新导航链接的 current 高亮状态
-          var currentFileName = url.split('/').pop().split('?')[0].split('#')[0] || 'index.html';
-          $('.main-nav-link').each(function() {
-            var href = $(this).attr('href') || '';
-            var targetName = href.split('/').pop().split('?')[0].split('#')[0];
-            if (targetName === currentFileName || (currentFileName === '' && targetName === 'index.html')) {
-              $(this).addClass('current');
-            } else {
-              $(this).removeClass('current');
-            }
-          });
+          // 5. 重置顶栏吸顶章节状态并更新历史记录（导航高亮由下方 initPage -> updateNavActiveState 统一维护）
+          $('#nav-outer').removeClass('has-active-section is-scrolled-fade');
 
           // 6. 更新历史记录并滚到顶部（若有锚点 hash 则滚到锚点）
           if (isPush !== false) {
